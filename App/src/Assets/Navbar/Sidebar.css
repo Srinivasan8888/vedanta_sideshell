@@ -1,0 +1,42 @@
+/* App/src/Assets/Sidebar/Sidebar.css */
+@keyframes easeInRight {
+    0% {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes easeOutRight {
+    0% {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+  
+  .animate__easeInRight {
+    animation: easeInRight 0.5s forwards; /* Adjust duration as needed */
+  }
+  
+  .animate__easeOutRight {
+    animation: easeOutRight 0.5s forwards; /* Adjust duration as needed */
+  }
+
+  /* Hide the spin buttons in WebKit browsers */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Hide spin buttons in Firefox */
+input[type="number"] {
+    -moz-appearance: textfield;
+}

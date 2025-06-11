@@ -1,0 +1,15 @@
+/* Change the calendar icon to white */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* Inverts the color to white */
+    cursor: pointer; /* Changes the cursor to a pointer */
+  }
+  
+  /* Optional: Style the input field */
+  input[type="date"] {
+    color: white;
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid gray;
+    border-radius: 4px;
+    padding: 8px;
+    cursor: pointer; /* Changes the cursor to a pointer */
+  }

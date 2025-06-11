@@ -1,0 +1,10 @@
+.blur-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(16, 16, 16, 0.9);
+    backdrop-filter: blur(10px); /* Adjust the blur intensity as needed */
+    z-index: 0; /* Ensure it is behind other content */
+  }
