@@ -14,6 +14,9 @@ module.exports ={
         "custom-md": "769px", // Custom md breakpoint
         "custom-md-air": "820px", // Custom md breakpoint
         "custom-1.5xl": "1440px", // Custom md breakpoint
+        "ipad-mini": "768px", // iPad Mini (768 x 1024)
+        "ipad-air": "820px", // iPad Air (820 x 1180)
+        "ipad-pro": "1024px", // iPad Pro (1024 x 1366)
       },
       colors: {
         primary: {
