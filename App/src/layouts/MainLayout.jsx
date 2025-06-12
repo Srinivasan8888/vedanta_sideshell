@@ -13,15 +13,13 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-fixed bg-center bg-cover" style={{ backgroundImage: `url(${bg})` }}>
+    <div className="bg-fixed bg-center bg-cover h-screen overflow-hidden" style={{ backgroundImage: `url(${bg})` }}>
       <div className="w-full">
         <Navbar onLogout={handleLogout} socketRef={socketRef} />
       </div>
-      <main className="w-full">
-        <div className="p-4">
-          <Outlet />
-        </div>
-      </main>
+      <div className="h-[calc(100vh-64px)] overflow-auto">
+        <Outlet />
+      </div>
     </div>
   );
 };
