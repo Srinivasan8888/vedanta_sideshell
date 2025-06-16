@@ -13,7 +13,9 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="bg-fixed bg-center bg-cover h-screen overflow-hidden" style={{ backgroundImage: `url(${bg})` }}>
+    <div className="bg-fixed bg-center bg-cover h-screen overflow-hidden "
+      style={{ backgroundImage: `url(${bg})` }}
+    >
       <div className="w-full">
         <Navbar onLogout={handleLogout} socketRef={socketRef} />
       </div>
@@ -25,3 +27,19 @@ const MainLayout = () => {
 };
 
 export default MainLayout;
+
+
+
+//  <div className="fixed inset-0 z-0">
+//       <div 
+//         className="absolute inset-0"
+//         style={{
+//           backgroundImage: `url(${bg})`,
+//           backgroundSize: 'cover',
+//           backgroundPosition: 'center',
+//           filter: 'blur(8px) brightness(0.5)',
+//           transform: 'scale(1.02)' // Prevents blur edge artifacts
+//         }}
+//       />
+//         <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+//       </div>
