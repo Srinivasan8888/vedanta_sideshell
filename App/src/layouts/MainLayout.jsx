@@ -13,7 +13,7 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="relative h-screen flex flex-col lg:overflow-hidden">
+    <div className="relative h-screen flex flex-col xl:overflow-hidden">
       {/* Background with blur - separate from content */}
       <div 
         className="fixed inset-0 -z-10"
@@ -25,7 +25,7 @@ const MainLayout = () => {
           transform: 'scale(1.02)'
         }}
       >
-        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-0 bg-white/50" />
       </div>
       
       {/* Navbar - fixed at top */}
@@ -34,7 +34,7 @@ const MainLayout = () => {
       </div>
       
       {/* Scrollable content area */}
-      <div className="flex-1 lg:overflow-hidden">
+      <div className="flex-1 xl:overflow-hidden">
         <div className="h-full overflow-y-auto pb-4">
           <Outlet />
         </div>

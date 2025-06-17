@@ -67,8 +67,8 @@ function ModelViewer({ modelPath }) {
           <Model url={modelPath} />
           <OrbitControls 
             enableZoom={true}
-            enablePan={true}
-            enableRotate={true}
+            enablePan={false}
+            enableRotate={false}
             minDistance={2}
             maxDistance={20}
           />

@@ -29,8 +29,8 @@ function App() {
     <div className="App">
       <HashRouter>
         <Routes>
-          <Route index element={<Login />} />
-          <Route path="/admin_xyma_signup" element={<Signup />} />
+          {/* <Route index element={<Login />} />
+          <Route path="/admin_xyma_signup" element={<Signup />} /> */}
           
           {/* Protected routes */}
           
@@ -53,7 +53,7 @@ function App() {
               </div>
             </div>
           } />
-            <Route element={<ProtectedRoute />}>
+            {/* <Route element={<ProtectedRoute />}> */}
               <Route element={<MainLayout />}>
                 <Route path="/Dashboard" element={<Dashboard />} />
                 <Route path="/CollectorBar" element={<CollectorBar />} />
@@ -63,7 +63,7 @@ function App() {
                 <Route path="/Heatmap" element={<Heatmap />} />
                 <Route path="/Test" element={<Test />} />
               </Route>
-            </Route>
+            {/* </Route> */}
 
           {/* 404 route - should be last */}
           <Route path="*" element={<NoPage />} />
