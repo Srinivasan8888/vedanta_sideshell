@@ -29,28 +29,28 @@ const generateSensorData = () => {
       value,
       difference: Math.abs(difference),
       isPositive,
-      unit: '°C'
+      // unit: '°C'
     });
   }
   return sensors;
 };
 
 const SensorCard = ({ sensor }) => (
-  <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 hover:shadow transition-shadow w-32 relative">
-    <div className={`absolute top-4 right-1  flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-      {sensor.isPositive ? <FaArrowUp className="mr-0.5" /> : <FaArrowDown className="mr-0.5" />}
+  <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-sm border border-gray-200 hover:shadow transition-shadow w-40 relative">
+    <div className={`absolute bottom-4 right-1 pl-2 bg-white rounded-full p-1 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+      {sensor.isPositive ? <FaArrowUp className="mr-0.5 mb-0.9" /> : <FaArrowDown className="mr-0.5 mb-0.9" />}
       <span className="font-medium">
         {sensor.difference}
       </span>
     </div>
     <div className="flex flex-col">
+    <h3 className="text-sm font-bold text-[#1e2c74] truncate flex left-0">{sensor.name}</h3>
       <div className="flex items-baseline">
-        <span className="text-lg font-bold text-gray-900">
+        <span className="text-lg font-bold text-[#3047c0]">
           {sensor.value}
-          <span className="text-xs font-normal text-gray-500 ml-1">{sensor.unit}</span>
+          <span className="text-lg font-bold text-[#3047c0]">°C</span>
         </span>
       </div>
-      <h3 className="text-xs font-bold text-gray-500 truncate pr-12">{sensor.name}</h3>
     </div>
   </div>
 );
@@ -72,30 +72,15 @@ const Dashboard = () => {
   return (
     <div className="h-full w-full">
       <div className="flex flex-col h-full w-full text-2xl font-bold text-black lg:grid lg:grid-cols-2 lg:grid-rows-2 gap-4 p-4">
-
         <div className="order-2 rounded-lg overflow-hidden lg:order-1">
-
           <div className="grid h-full grid-col gap-2">
             <div className="bg-gray-900 border-2 border-gray-100 rounded-2xl shadow-md overflow-hidden">
-
-            <div className="flex flex-col items-center w-full">
-              <div className="grid grid-cols-2 md:grid-cols-6 lg:grid-cols-6 gap-2 p-2 w-full max-w-5xl">
-                {sensors.slice(0, 6).map((sensor) => (
-                  <div key={sensor.id} className="h-fit">
-                    <SensorCard sensor={sensor} />
-                  </div>
-                ))}
-              </div>
-              <div className="w-full border-t border-gray-200 my-2"></div>
-            </div>
-            
-
               <div className="h-full w-full p-4">
                 <div className="flex flex-col h-full w-full">
                   <div className="flex-1 overflow-x-auto scrollbar-custom 2xl:overflow-y-hidden">
-                    <div className="flex space-x-3 p-1">
+                    <div className="flex space-x-2 md:space-x-12 p-1">
                       {Array(Math.ceil(sensors.length / 4)).fill().map((_, colIndex) => (
-                        <div key={colIndex} className="flex-none w-40 space-y-2">
+                        <div key={colIndex} className="flex-none w-40 md:space-y-5">
                           {sensors.slice(colIndex * 4, (colIndex + 1) * 4).map((sensor) => (
                             <div key={sensor.id} className="h-20">
                               <SensorCard sensor={sensor} />
@@ -110,8 +95,8 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        <div className="order-1 flex items-center justify-center rounded-2xl lg:order-2  overflow-hidden " style={{ minHeight: '400px' }}>
-          <Suspense fallback={<Loader />}>
+        <div className="order-1 flex items-center justify-center rounded-2xl lg:order-2 shadow-md overflow-hidden bg-white/30 backdrop-blur-sm border border-white/20" style={{ minHeight: '400px' }}>
+          <Suspense fallback={<div className="w-full h-full flex items-center justify-center">Loading 3D model...</div>}>
             <ModelViewer modelPath="/side_shell.glb" />
           </Suspense>
         </div>

@@ -46,6 +46,7 @@ export function Menus() {
             {open && (
               <div className='absolute right-0 z-50 w-56 mt-2 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-xl overflow-hidden'>
                 <MenuItems className="divide-y divide-gray-700">
+
                   <MenuItem>
                     {({ active }) => (
                       <a
@@ -62,6 +63,7 @@ export function Menus() {
                       </a>
                     )}
                   </MenuItem>
+
                   <MenuItem>
                     {({ active }) => (
                       <a
@@ -78,6 +80,7 @@ export function Menus() {
                       </a>
                     )}
                   </MenuItem>
+
                   <MenuItem>
                     {({ active }) => (
                       <a
@@ -94,6 +97,7 @@ export function Menus() {
                       </a>
                     )}
                   </MenuItem>
+
                   <MenuItem>
                     {({ active }) => (
                       <a
@@ -127,6 +131,7 @@ export function Menus() {
                       </a>
                     )}
                   </MenuItem>
+
                   <MenuItem>
                     {({ active }) => (
                       <button
@@ -143,6 +148,7 @@ export function Menus() {
                       </button>
                     )}
                   </MenuItem>
+
                 </MenuItems>
               </div>
             )}
