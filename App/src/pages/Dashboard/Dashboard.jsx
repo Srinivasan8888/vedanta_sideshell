@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useCallback } from 'react';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import '../../Assets/Navbar/Sidebar.css';
 import {
@@ -81,6 +81,32 @@ const SensorCard = ({ sensor }) => (
 
 const Dashboard = () => {
   const [sensors, setSensors] = useState([]);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const scrollContainerRef = React.useRef(null);
+  const scrollAmount = 200; // Adjust this value to control scroll distance
+
+  const scrollLeft = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const newPosition = Math.max(0, scrollPosition - scrollAmount);
+      scrollContainerRef.current.scrollTo({
+        left: newPosition,
+        behavior: 'smooth'
+      });
+      setScrollPosition(newPosition);
+    }
+  }, [scrollPosition, scrollAmount]);
+
+  const scrollRight = useCallback(() => {
+    if (scrollContainerRef.current) {
+      const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+      const newPosition = Math.min(maxScroll, scrollPosition + scrollAmount);
+      scrollContainerRef.current.scrollTo({
+        left: newPosition,
+        behavior: 'smooth'
+      });
+      setScrollPosition(newPosition);
+    }
+  }, [scrollPosition, scrollAmount]);
 
   useEffect(() => {
     // In a real app, you would fetch this data from an API
@@ -99,21 +125,46 @@ const Dashboard = () => {
         <div className="order-2 rounded-lg overflow-hidden xl:order-1">
           <div className="grid h-full grid-col gap-2">
             <div className="bg-white/30 backdrop-blur-sm border-2 border-gray-100 rounded-2xl shadow-md overflow-hidden h-full w-full p-4">
-              <div className="flex-1 overflow-x-auto scrollbar-custom xl:overflow-y-hidden">
-                <div className="flex space-x-2 2xl:space-x-12 p-1">
-                  {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                    <div key={colIndex} className="flex-none w-40 space-y-2 2xl:space-y-3">
-                      {sensors.slice(
-                        colIndex * 3,
-                        colIndex * 3 + (window.innerWidth >= 1920 ? 4 : 3)
-                      ).map((sensor) => (
-                        <div key={sensor.id} className="h-20">
-                          <SensorCard sensor={sensor} />
-                        </div>
-                      ))}
-                    </div>
-                  ))}
+              <div className="relative">
+                <button 
+                  onClick={scrollLeft}
+                  className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                  aria-label="Scroll left"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                  </svg>
+                </button>
+                <div 
+                  ref={scrollContainerRef}
+                  className="flex-1 overflow-x-auto scrollbar-custom xl:overflow-y-hidden px-4"
+                  style={{ scrollBehavior: 'smooth' }}
+                  onScroll={(e) => setScrollPosition(e.target.scrollLeft)}
+                >
+                  <div className="flex space-x-2 2xl:space-x-12 p-1">
+                    {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
+                      <div key={colIndex} className="flex-none w-40 space-y-2 2xl:space-y-3">
+                        {sensors.slice(
+                          colIndex * 3,
+                          colIndex * 3 + (window.innerWidth >= 1920 ? 4 : 3)
+                        ).map((sensor) => (
+                          <div key={sensor.id} className="h-20">
+                            <SensorCard sensor={sensor} />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
+                <button 
+                  onClick={scrollRight}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && scrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                  aria-label="Scroll right"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
