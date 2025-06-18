@@ -60,8 +60,14 @@ const generateSensorData = () => {
 };
 
 const SensorCard = ({ sensor }) => (
-  <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative">
-    <div className={`absolute bottom-4 right-1  bg-white rounded-full p-1 pl-2 pr-2 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+  <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
+    <button className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded">
+      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fillRule="evenodd" clipRule="evenodd" d="M2.005 0L10.005 8L2.005 16L0 14L6.005 8L0 2L2.005 0Z" fill="#3047C0"/>
+      </svg>
+    </button>
+    
+    <div className={`absolute bottom-3 right-1 bg-white rounded-full p-1 pl-2 pr-2 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
       {sensor.isPositive ? <FaArrowUp className="mr-0.5 mb-1 mt-0.5" /> : <FaArrowDown className="mr-0.5 mb-1 mt-0.5" />}
       <span className="font-medium">
         {sensor.difference}
@@ -80,6 +86,14 @@ const SensorCard = ({ sensor }) => (
 );
 
 const Dashboard = () => {
+  const [timeInterval, setTimeInterval] = useState('1H');
+
+  const handleTimeIntervalChange = (interval) => {
+    setTimeInterval(interval);
+    // Here you would typically fetch new data based on the selected interval
+    console.log(`Time interval changed to: ${interval}`);
+    // Update your chart data based on the selected interval
+  };
   const [sensors, setSensors] = useState([]);
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = React.useRef(null);
@@ -126,7 +140,7 @@ const Dashboard = () => {
           <div className="grid h-full grid-col gap-2">
             <div className="bg-white/30 backdrop-blur-sm border-2 border-gray-100 rounded-2xl shadow-md overflow-hidden h-full w-full p-4">
               <div className="relative">
-                <button 
+                <button
                   onClick={scrollLeft}
                   className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                   aria-label="Scroll left"
@@ -135,7 +149,7 @@ const Dashboard = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                   </svg>
                 </button>
-                <div 
+                <div
                   ref={scrollContainerRef}
                   className="flex-1 overflow-x-auto scrollbar-custom xl:overflow-y-hidden px-4"
                   style={{ scrollBehavior: 'smooth' }}
@@ -156,7 +170,7 @@ const Dashboard = () => {
                     ))}
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={scrollRight}
                   className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && scrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
                   aria-label="Scroll right"
@@ -177,16 +191,15 @@ const Dashboard = () => {
           </Suspense>
         </div>
         <div className="order-3 flex flex-col xl:flex-row items-stretch rounded-2xl xl:order-3 shadow-md p-4 gap-4 bg-white/30 backdrop-blur-sm border border-gray-100 overflow-hidden">
-          <div className="w-full  rounded-xl overflow-hidden">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Hourly Temperature Averages</h3>
-            <div className="overflow-x-auto max-h-96 overflow-y-auto scrollbar-custom">
+          <div className="w-full   rounded-xl overflow-hidden">
+            <div className="overflow-x-auto h-96  lg:max-h-full overflow-y-auto scrollbar-custom">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50/50 sticky top-0">
+                <thead className="bg-gray-50/50">
                   <tr>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
-                    <th scope="col" className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">#</th>
+                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-gray-200">
@@ -195,18 +208,17 @@ const Dashboard = () => {
                     const time = new Date();
                     time.setHours(index, 0, 0, 0);
                     const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    
+
                     return (
                       <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{timeString}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">{temp}°C</td>
-                        <td className="px-4 py-2 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            temp > 35 ? 'bg-red-100 text-red-800' : 
-                            temp > 30 ? 'bg-yellow-100 text-yellow-800' : 
-                            'bg-green-100 text-green-800'
-                          }`}>
+                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
+                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{timeString}</td>
+                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{temp}°C</td>
+                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${temp > 35 ? 'bg-red-100 text-red-800' :
+                            temp > 30 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
                             {temp > 35 ? 'High' : temp > 30 ? 'Moderate' : 'Normal'}
                           </span>
                         </td>
@@ -217,31 +229,125 @@ const Dashboard = () => {
               </table>
             </div>
           </div>
-          <div className="w-full border-2 border-white rounded-2xl p-4 bg-white/50">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Temperature Summary</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/80 p-3 rounded-lg border border-gray-100">
-                <p className="text-sm text-gray-600">Max Temp</p>
-                <p className="text-xl font-bold text-red-600">38.2°C</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-lg border border-gray-100">
-                <p className="text-sm text-gray-600">Min Temp</p>
-                <p className="text-xl font-bold text-blue-600">22.5°C</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-lg border border-gray-100">
-                <p className="text-sm text-gray-600">Avg Temp</p>
-                <p className="text-xl font-bold text-gray-800">29.8°C</p>
-              </div>
-              <div className="bg-white/80 p-3 rounded-lg border border-gray-100">
-                <p className="text-sm text-gray-600">Alerts</p>
-                <p className="text-xl font-bold text-red-600">3</p>
+
+          <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-1 border-gray-100">
+              <div className="flex items-center justify-end mt-1">
+                <div className="flex items-center space-x-1 bg-blue-50 text-blue-600 text-xs font-medium px-2.5 py-1 rounded-full">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  <span>Live</span>
+                </div>
               </div>
             </div>
-           
+
+            <div className="p-2 grid lg:grid-cols-4 2xl:grid-cols-2 gap-3 lg:h-36  2xl:h-fit">
+              <div className="bg-gradient-to-br from-red-50 to-white p-3 rounded-lg border border-red-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-red-600">Max Temp</span>
+                  <div className="p-1.5 bg-red-100 rounded-lg hidden 2xl:flex">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">38.2°C</p>
+                <p className="text-xs text-gray-500 mt-1">+2.4° from avg</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-blue-600">Min Temp</span>
+                  <div className="p-1.5 bg-blue-100 rounded-lg hidden 2xl:flex">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">22.5°C</p>
+                <p className="text-xs text-gray-500 mt-1">-1.8° from avg</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-lg border border-gray-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-gray-600">Avg Temp</span>
+                  <div className="p-1.5 bg-gray-100 rounded-lg hidden 2xl:flex">
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">29.8°C</p>
+                <p className="text-xs text-gray-500 mt-1">Last 24h average</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-amber-50 to-white p-3 rounded-lg border border-amber-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-medium text-amber-600">Alerts</span>
+                  <div className="p-1.5 bg-amber-100 rounded-lg hidden 2xl:flex">
+                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">3</p>
+                <p className="text-xs text-amber-600 font-medium mt-1">Requires attention</p>
+              </div>
+            </div>
+
+            <div className="mt-2 p-3 bg-gray-50 rounded-b-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Min Threshold</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Min value"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">°C</span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Max Threshold</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      placeholder="Max value"
+                    />
+                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">°C</span>
+                  </div>
+                </div>
+
+                <div className="sm:col-span-1">
+                  <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white lg:text-xs lg:font-thin 2xl:text-sm 2xl:font-medium py-[7px]  rounded-md shadow-sm hover:shadow transition-all duration-150 whitespace-nowrap">
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
+
         </div>
         <div className="order-4 p-4 border-2 rounded-2xl xl:order-4 shadow-md bg-white/30 backdrop-blur-sm">
-          <div className="w-full h-full">
+          <div className="w-full h-96 lg::h-full mt-2">
+            <div className="flex justify-end space-x-2 top-2 left-9 lg:left-16 absolute">
+              {['1H', '2H', '5H', '7H', '12H', '24H'].map((interval) => (
+                <button
+                  key={interval}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors duration-200 border
+                    ${timeInterval === interval 
+                      ? 'bg-blue-100 border-blue-300 text-blue-700' 
+                      : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}
+                    focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500`}
+                  onClick={() => handleTimeIntervalChange(interval)}
+                >
+                  {interval}
+                </button>
+              ))}
+            </div>
             <Line
               data={{
                 labels: Array.from({ length: 24 }, (_, i) => {
@@ -287,7 +393,7 @@ const Dashboard = () => {
                     padding: 12,
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     callbacks: {
-                      label: function(context) {
+                      label: function (context) {
                         return ` ${context.parsed.y}°C`;
                       }
                     }
@@ -312,7 +418,7 @@ const Dashboard = () => {
                     },
                     ticks: {
                       color: '#6B7280',
-                      callback: function(value) {
+                      callback: function (value) {
                         return value + '°C';
                       }
                     },

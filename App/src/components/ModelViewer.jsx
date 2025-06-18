@@ -7,11 +7,11 @@ function Model({ url }) {
   const { scene } = useGLTF(url);
   
   // Rotate the model
-  useFrame(() => {
-    if (group.current) {
-      group.current.rotation.y += 0.005;
-    }
-  });
+  // useFrame(() => {
+  //   if (group.current) {
+  //     group.current.rotation.y += 0.005;
+  //   }
+  // });
 
   return (
     <group ref={group} scale={0.5}>
@@ -67,8 +67,8 @@ function ModelViewer({ modelPath }) {
           <Model url={modelPath} />
           <OrbitControls 
             enableZoom={true}
-            enablePan={false}
-            enableRotate={false}
+            enablePan={true}
+            enableRotate={true}
             minDistance={2}
             maxDistance={20}
           />
