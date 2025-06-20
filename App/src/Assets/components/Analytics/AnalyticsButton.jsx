@@ -8,7 +8,7 @@ const AnalyticsButton = ({ selectedButton , setSelectedButton }) => {
   // console.log("Selected Button in AnalyticsButton:", selectedButton); // Debugging
 
   return (
-    <div className="xl:w-[25%] xl:h-[100%] h-[270px] bg-[rgba(16,16,16,0.6)] mt-4 grid grid-cols-2 gap-4 rounded-xl p-4 border backdrop-blur-sm md:backdrop-blur border-white">
+    <div className="xl:w-[25%]  h-[280px]  bg-[rgba(16,16,16,0.6)] mt-4 grid grid-cols-2 gap-4 rounded-xl p-4 border backdrop-blur-sm md:backdrop-blur border-white">
       <button
         className={`bg-[rgb(16,16,16)] rounded-xl border h-[100%] focus:ring-2 focus:ring-white flex flex-col justify-center items-center ${
           selectedButton === "Average" ? "ring-2 ring-white focus:ring-[#00FF00]" : "focus:ring-[#00FF00]"

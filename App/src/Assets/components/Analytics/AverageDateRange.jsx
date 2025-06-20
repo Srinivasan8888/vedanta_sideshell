@@ -53,38 +53,7 @@ const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
         Select Date Range
       </div>
 
-      {/* <div className="flex md:flex-row flex-col gap-4 mt-2 md:mt-0 items-center justify-center w-full md:gap-2 md:h-[25%] md:space-x-10">
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="startdate"
-            className="text-sm font-medium text-white whitespace-nowrap"
-          >
-            From
-          </label>
-          <input
-            type="date"
-            id="startdate"
-            name="startdate"
-            value={startDate}
-            className="w-full text-sm text-white bg-[rgba(0,0,0,0.6)]  border border-gray-200 rounded-md shadow-sm p-1 custom-datepicker"
-          />
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="enddate"
-            className="text-sm font-medium text-white whitespace-nowrap"
-          >
-            To
-          </label>
-          <input
-            type="date"
-            id="enddate"
-            name="enddate"
-            className="w-full text-sm text-white bg-[rgba(0,0,0,0.6)]  border border-gray-200 rounded-md shadow-sm p-1 custom-datepicker"
-          />
-        </div>
-      </div> */}
+   
 
       <div className="flex md:flex-row flex-col gap-4 mt-2 md:mt-0 items-center justify-center w-full lg:gap-2 md:h-[25%] lg:space-x-10 ">
         <div className="flex items-center space-x-2">

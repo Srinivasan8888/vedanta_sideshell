@@ -17,6 +17,7 @@ module.exports ={
         "ipad-mini": "768px", // iPad Mini (768 x 1024)
         "ipad-air": "820px", // iPad Air (820 x 1180)
         "ipad-pro": "1024px", // iPad Pro (1024 x 1366)
+        "3xl-custom" : '1855px',
       },
       colors: {
         primary: {

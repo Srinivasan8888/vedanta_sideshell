@@ -23,17 +23,17 @@ const Analytics = () => {
 
   return (
     <div
-     
+
     >
-      
-      <div className="m-4 rounded-lg border border-white bg-[rgba(16,16,16,0.5)] md:h-[90%]">
-      <div className="m-4 gap-3  xl:h-[35%] md:grid md:grid-cols-2 xl:flex xl:grid-cols-none">
+
+      <div className="m-4 rounded-lg border border-white bg-[rgba(16,16,16,0.5)] ">
+        <div className="m-4 gap-3 md:grid md:grid-cols-2 xl:flex xl:grid-cols-none">
           <AnalyticsButton
             selectedButton={selectedButton}
             setSelectedButton={setSelectedButton}
           />
 
-          <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-white bg-[rgba(16,16,16,0.7)] py-4 text-white backdrop-blur xl:h-[100%] xl:w-[35%]">
+          <div className="mt-4 flex flex-col items-center justify-center rounded-xl border border-white bg-[rgba(16,16,16,0.7)] py-4 text-white backdrop-blur xl:w-[35%]">
             {selectedButton === "Average" && (
               <AverageDateRange
                 selectedBusBar={selectedBusBar}
@@ -61,8 +61,8 @@ const Analytics = () => {
           </div>
 
           <div className="scrollbar-custom mt-4 h-auto w-full overflow-x-auto overflow-y-auto rounded-xl border border-white p-2 text-white backdrop-blur md:flex md:h-[100%] lg:h-[300px] lg:w-full md:col-span-2 xl:h-[100%] md:flex-row md:p-4 xl:w-[40%]">
-          <div className="w-full rounded-xl bg-[rgba(16,16,16,0.7)] pb-4 md:h-[100%] md:w-[60%]">
-          <div className="flex items-center justify-center py-2 font-['Poppins'] text-[18px] font-semibold text-white md:h-[20%] md:text-[22px]">
+            <div className="w-full rounded-xl bg-[rgba(16,16,16,0.7)] pb-4 md:h-[100%] md:w-[60%]">
+              <div className="flex items-center justify-center py-2 font-['Poppins'] text-[18px] font-semibold text-white md:h-[20%] md:text-[22px]">
                 Side A
               </div>
               <div className="flex justify-center">
@@ -70,11 +70,10 @@ const Analytics = () => {
                   {[1, 2, 3, 4, 5, 6].map((busBarNumber) => (
                     <button
                       key={busBarNumber}
-                      className={`flex h-16 w-20 items-center justify-center rounded-lg border bg-[rgba(16,16,16,0.9)] focus:outline-none focus:ring-2 focus:ring-white md:h-20 md:w-28 ${
-                        selectedBusBar === busBarNumber
+                      className={`flex h-16 w-20 items-center justify-center rounded-lg border bg-[rgba(16,16,16,0.9)] focus:outline-none focus:ring-2 focus:ring-white md:h-20 md:w-28 ${selectedBusBar === busBarNumber
                           ? "border-4 border-white"
                           : "border border-white"
-                      }`}
+                        }`}
                       onClick={() => handleBusBarClick(busBarNumber)}
                     >
                       <span className="font-['Poppins'] text-sm font-medium text-white md:text-base">
@@ -95,11 +94,10 @@ const Analytics = () => {
                   {[7, 8, 9, 10].map((busBarNumber) => (
                     <button
                       key={busBarNumber}
-                      className={`flex h-16 w-20 items-center justify-center rounded-lg border bg-[rgba(16,16,16,0.9)] focus:outline-none focus:ring-2 focus:ring-white  md:h-20 md:w-28 ${
-                        selectedBusBar === busBarNumber
+                      className={`flex h-16 w-20 items-center justify-center rounded-lg border bg-[rgba(16,16,16,0.9)] focus:outline-none focus:ring-2 focus:ring-white  md:h-20 md:w-28 ${selectedBusBar === busBarNumber
                           ? "border-4 border-white"
                           : "border border-white"
-                      }`}
+                        }`}
                       onClick={() => handleBusBarClick(busBarNumber)}
                     >
                       <span className="font-['Poppins'] text-sm font-medium text-white md:text-base">

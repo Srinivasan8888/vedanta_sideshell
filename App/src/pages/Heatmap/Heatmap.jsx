@@ -46,143 +46,7 @@ const Heatmap = () => {
     // console.log("Switcher Value10 of side:", newValue);
   };
 
-  // useEffect(() => {
-  //   let currentUserId = localStorage.getItem("id");
-  //   const accessToken = localStorage.getItem("accessToken");
-
-  //   const createSocket = (userId) => {
-  //     const newSocket = io(process.env.REACT_APP_WEBSOCKET_URL, {
-  //       auth: { accessToken, userId },
-  //     });
-
-  //     newSocket.on("connect_error", (err) => {
-  //       console.error("WebSocket connection error:", err);
-  //       setError("Failed to connect to the WebSocket server.");
-  //     });
-
-  //     socketRef.current = newSocket; // Update ref with new socket
-  //     return newSocket;
-  //   };
-
-  //   const initialSocket = createSocket(currentUserId);
-  //   setSocket(initialSocket);
-
-  //   const intervalId = setInterval(() => {
-  //     const newUserId = localStorage.getItem("id");
-
-  //     if (newUserId !== currentUserId) {
-  //       console.log("UserId changed. Reconnecting socket...");
-  //       currentUserId = newUserId;
-
-  //       // Disconnect using ref instead of initialSocket
-  //       if (socketRef.current) {
-  //         socketRef.current.disconnect();
-  //       }
-
-  //       const updatedSocket = createSocket(newUserId);
-  //       setSocket(updatedSocket);
-  //       console.log("id finding=", newUserId);
-  //     }
-  //   }, 500);
-
-  //   return () => {
-  //     clearInterval(intervalId);
-  //     // Disconnect using ref instead of initialSocket
-  //     if (socketRef.current) {
-  //       socketRef.current.disconnect();
-  //     }
-  //   };
-  // }, []);
-
-  // useEffect(() => {
-  //   // Load initial data from localStorage
-  //   const savedASide = localStorage.getItem("HeatmapASide");
-  //   const savedBSide = localStorage.getItem("HeatmapBSide");
-  //   const savedASiderange = localStorage.getItem("HeatmapASiderange");
-  //   const savedBSiderange = localStorage.getItem("HeatmapBSiderange");
-
-  //   if (savedASide) setASideData(JSON.parse(savedASide));
-  //   if (savedBSide) setBSideData(JSON.parse(savedBSide));
-  //   if (savedASiderange) setCombinedData(JSON.parse(savedASiderange));
-  //   if (savedBSiderange) setCombinedData(JSON.parse(savedBSiderange));
-  // }, []);
-
-  // useEffect(() => {
-  //   if (!socket) return;
-
-  //   // Listen for ASide data
-  //   socket.on("ASide", (data) => {
-  //     console.log("Received ASide Data:", data);
-  //     setASideData(data);
-  //     localStorage.setItem("HeatmapASide", JSON.stringify(data));
-  //   });
-
-  //   // Listen for BSide data
-  //   socket.on("BSide", (data) => {
-  //     console.log("Received BSide Data:", data);
-  //     setBSideData(data);
-  //     localStorage.setItem("HeatmapBSide", JSON.stringify(data));
-  //   });
-
-  //   // for the 7 values for min and max in the table
-  //   const handleData = (ASideData, BSideData) => {
-  //     const mergedData = [
-  //       ...ASideData.map((data) => ({ ...data, source: "ASiderange" })),
-  //       ...BSideData.map((data) => ({ ...data, source: "BSiderange" })),
-  //     ];
-  //     const filteredData = mergedData.filter(
-  //       (data) =>
-  //         data.source ===
-  //         (switcherValue10 === "ASide" ? "ASiderange" : "BSiderange"),
-  //     );
-  //     setCombinedData(filteredData);
-  //   };
-
-  //   // Listen for ASiderange and BSiderange data
-  //   let ASideData = [];
-  //   let BSideData = [];
-
-  //   socket.on("ASiderange", (data) => {
-  //     console.log("Received ASiderange Data:", data);
-  //     if (Array.isArray(data)) {
-  //       ASideData = data; // Store ASiderange data
-  //       localStorage.setItem("HeatmapASiderange", JSON.stringify(data));
-  //       handleData(ASideData, BSideData);
-  //     }
-  //   });
-
-  //   socket.on("BSiderange", (data) => {
-  //     console.log("Received BSiderange Data:", data);
-  //     if (Array.isArray(data)) {
-  //       BSideData = data; // Store BSiderange data
-  //       localStorage.setItem("HeatmapBSiderange", JSON.stringify(data));
-  //       handleData(ASideData, BSideData);
-  //     }
-  //   });
-
-  //   // Automatically fetch data when the socket is connected or when dependencies change
-  //   const requestData = {
-  //     value: switcherValue,
-  //     startDate: startDate,
-  //     endDate: endDate,
-  //     side: switcherValue10, // This should trigger the effect when it changes
-  //   };
-
-  //   socket.emit("requestrangedata", requestData);
-  //   console.log(requestData);
-  //   socket.emit("requestData", requestData);
-
-  //   // Cleanup listeners
-  //   return () => {
-  //     socket.off("ASide");
-  //     socket.off("BSide");
-  //     socket.off("ASiderange");
-  //     socket.off("BSiderange");
-  //   };
-  // }, [socket, switcherValue, startDate, endDate, switcherValue10]); // Ensure switcherValue10 is included
-
-  // Retrieve dates from local storage on component mount
-  useEffect(() => {
+ useEffect(() => {
     const storedStartDate = localStorage.getItem("startDate");
     const storedEndDate = localStorage.getItem("endDate");
 
@@ -236,15 +100,16 @@ const Heatmap = () => {
   }, [startDate, endDate, switcherValue, switcherValue10]); // <-- These dependencies trigger the effect
 
   return (
-    <div>
-      <div className="m-4 flex flex-col rounded-lg border border-white bg-[rgba(16,16,16,0.75)] text-white md:h-[87%]">
+
+      <div className="m-4 flex flex-col rounded-lg border border-white bg-[rgba(16,16,16,0.75)] text-white md:h-[95%]">
         <div className="grid-row md:grid-col grid h-[1100px] rounded-tl-lg rounded-tr-lg md:h-[40%] md:w-full">
+          
           <div className="h-[10px] md:h-[100%]">
             <div className="flex h-[480px] flex-col px-10 py-4 md:h-full md:justify-between">
               <p className="mb-2 flex justify-start text-2xl font-semibold md:h-[40%] xl:h-[20%] xl:mb-0">
                 Collector Bar
               </p>
-              <div className="flex h-[100%] w-[100%] flex-col md:flex-row xl:h-[100%] xl:flex-row">
+              <div className="flex h-[100%] w-[100%] flex-col md:flex-row mt-2 xl:flex-row">
                 <div className="flex w-[100%] flex-col items-center justify-evenly md:w-[40%] md:flex-col custom-md-air:flex-col xl:w-[30%] xl:flex-row">
                 <p>
                     <Switcher10 onValueChange10={handleSwitcherValueChange10} />
@@ -279,9 +144,9 @@ const Heatmap = () => {
 
                   <div className="mt-4 flex w-[100%] flex-col items-center justify-evenly md:mt-0 md:h-[50%] md:flex-row md:gap-4 xl:h-[100%] xl:w-[50%]">
                   <p className="mt-3 text-lg">Current Date</p>
-                    <div className="mb-5 flex h-10 flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)] md:mb-0 md:h-[85%] xl:h-[55%] md:w-[50%] xl:w-[40%]">
+                    <div className="mb-5 flex h-10 flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)] md:mb-0 md:h-[85%] xl:h-[55%] md:w-[50%] xl:w-[40%] m-2">
                       {" "}
-                      <p className="text-xl font-semibold">
+                      <p className="text-xl font-semibold p-4">
                         {new Date().toLocaleDateString("en-GB", {
                           day: "2-digit",
                           month: "short",
@@ -339,7 +204,7 @@ const Heatmap = () => {
                       <div className="flex h-full flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)]">
                         <div
                           key={index}
-                          className="flex h-full w-[40%] items-center justify-center rounded-lg"
+                          className="flex h-full w-[40%] items-center justify-center rounded-lg m-3"
                         >
                           <div className="text-xl font-semibold text-[rgb(39,129,255)]">
                             No Data Available
@@ -354,14 +219,14 @@ const Heatmap = () => {
           </div>
         </div>
 
-        <div className="scrollbar-custom mx-8 flex overflow-x-auto overflow-y-auto rounded-bl-lg rounded-br-lg md:mt-4 md:h-[60%]">
+        <div className="scrollbar-custom mx-8 flex overflow-x-auto overflow-y-auto rounded-bl-lg rounded-br-lg md:mt-4 h-[100%]">
           <HeatmapTable 
             data={heatmapData.data || []}
             dates={heatmapData.dates || []}
           />
         </div>
       </div>
-    </div>
+ 
   );
 };
 

@@ -72,9 +72,9 @@ const CountData = () => {
   );
 
   return (
-    <div className="xl:w-[50%] w-[100%]">
+    <div className="md:h-full xl:w-[50%] w-[100%] md:p-4 xl:p-0">
       <div className="md:h-[16%] flex flex-row justify-center items-end md:text-3xl md:font-semibold md:mt-0 mt-4">
-        Select Count
+      Select Count
       </div>
       <div className="flex flex-col md:h-[60%] gap-10 justify-center mx-16 mt-10 md:mt-0">
         {renderRadioButton("100", "Last 100 Data")}
