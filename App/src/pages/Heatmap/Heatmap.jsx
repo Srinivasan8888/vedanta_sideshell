@@ -101,7 +101,7 @@ const Heatmap = () => {
 
   return (
 
-      <div className="m-4 flex flex-col rounded-lg border border-white bg-[rgba(16,16,16,0.75)] text-white md:h-[95%]">
+      <div className="m-4 flex flex-col rounded-lg border border-white bg-[rgba(16,16,16,0.75)] text-white md:h-[95%] ">
         <div className="grid-row md:grid-col grid h-[1100px] rounded-tl-lg rounded-tr-lg md:h-[40%] md:w-full">
           
           <div className="h-[10px] md:h-[100%]">
@@ -219,7 +219,7 @@ const Heatmap = () => {
           </div>
         </div>
 
-        <div className="scrollbar-custom mx-8 flex overflow-x-auto overflow-y-auto rounded-bl-lg rounded-br-lg md:mt-4 h-[100%]">
+        <div className="scrollbar-custom mx-8 flex overflow-x-auto overflow-y-auto rounded-bl-lg rounded-br-lg md:mt-4 h-[100%] ">
           <HeatmapTable 
             data={heatmapData.data || []}
             dates={heatmapData.dates || []}

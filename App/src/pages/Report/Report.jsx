@@ -26,7 +26,7 @@ const Report = () => {
   return (
     <div>
       {/* <div className="flex bg-[rgba(16,16,16,0.5)] md:h-[87%] m-4 rounded-lg border border-white sm:flex-cols sm:flex-row-none md:flex-row"> */}
-      <div className="flex bg-[rgba(16,16,16,0.5)] md:h-[90%]  lg:h-[80%]  m-4 rounded-lg border border-white flex-col xl:flex-row ">
+      <div className="flex bg-[rgba(16,16,16,0.5)] md:h-[90%]  lg:h-[80%] xl:h-[100%] m-4 rounded-lg border border-white flex-col xl:flex-row ">
         <ReportsButton
           selectedButton={selectedButton}
           setSelectedButton={setSelectedButton}

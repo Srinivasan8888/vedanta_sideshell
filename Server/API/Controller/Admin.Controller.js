@@ -11,7 +11,7 @@ import SetAlertModel from '../Models/SetAlertModel.js';
 import UserLog from '../Models/UserLogs.js';
 import Values from '../Models/ValueModel.js';
 import DeviceId from '../Models/Deviceid.js';
-import sensorModel1 from '../Models/sensorModel1.js';
+
 
 
 //post request's
@@ -635,63 +635,63 @@ export const getLimitsValue = async (req, res) => {
     }
 }
 
-export const getAllDevices = async (req, res) => {
-    try {
-        // Fetch all devices, sorted by timestamp (newest first)
-        const devices = await DeviceId.find()
-            .sort({ timestamp: -1 })
-            .select('deviceId timestamp');
+// export const getAllDevices = async (req, res) => {
+//     try {
+//         // Fetch all devices, sorted by timestamp (newest first)
+//         const devices = await DeviceId.find()
+//             .sort({ timestamp: -1 })
+//             .select('deviceId timestamp');
 
-        if (!devices || devices.length === 0) {
-            return res.status(200).json({
-                success: true,
-                message: 'No devices found',
-                data: []
-            });
-        }
+//         if (!devices || devices.length === 0) {
+//             return res.status(200).json({
+//                 success: true,
+//                 message: 'No devices found',
+//                 data: []
+//             });
+//         }
 
-        // Get latest timestamp from SensorModel1 for each device
-        const deviceIds = devices.map(device => device.deviceId);
-        const latestSensorData = await sensorModel1.aggregate([
-            { $match: { id: { $in: deviceIds } } },
-            { $sort: { _id: -1 } },
-            { $group: {
-                _id: "$id",
-                latestTimestamp: { $first: "$timestamp" },
-                createdAt: { $first: "$createdAt" }
-            }}
-        ]);
+//         // Get latest timestamp from SensorModel1 for each device
+//         const deviceIds = devices.map(device => device.deviceId);
+//         const latestSensorData = await sensorModel1.aggregate([
+//             { $match: { id: { $in: deviceIds } } },
+//             { $sort: { _id: -1 } },
+//             { $group: {
+//                 _id: "$id",
+//                 latestTimestamp: { $first: "$timestamp" },
+//                 createdAt: { $first: "$createdAt" }
+//             }}
+//         ]);
 
-        // Create mapping of deviceId to latest timestamp
-        const latestTimestamps = new Map(latestSensorData.map(item => [item._id, item.latestTimestamp]));
+//         // Create mapping of deviceId to latest timestamp
+//         const latestTimestamps = new Map(latestSensorData.map(item => [item._id, item.latestTimestamp]));
 
-        // Create mapping of deviceId to timestamps
-        const timestampMapping = new Map(latestSensorData.map(item => [
-            item._id,
-            {
-                latestTimestamp: item.latestTimestamp,
-                createdAt: item.createdAt
-            }
-        ]));
+//         // Create mapping of deviceId to timestamps
+//         const timestampMapping = new Map(latestSensorData.map(item => [
+//             item._id,
+//             {
+//                 latestTimestamp: item.latestTimestamp,
+//                 createdAt: item.createdAt
+//             }
+//         ]));
 
-        res.status(200).json({
-            success: true,
-            message: 'Devices retrieved successfully',
-            data: devices.map(device => ({
-                id: device._id,
-                deviceId: device.deviceId,
-                sensorCreatedAt: timestampMapping.get(device.deviceId)?.createdAt || null
-            }))
-        });
-    } catch (error) {
-        console.error('Error fetching devices:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Internal server error',
-            error: error.message
-        });
-    }
-};
+//         res.status(200).json({
+//             success: true,
+//             message: 'Devices retrieved successfully',
+//             data: devices.map(device => ({
+//                 id: device._id,
+//                 deviceId: device.deviceId,
+//                 sensorCreatedAt: timestampMapping.get(device.deviceId)?.createdAt || null
+//             }))
+//         });
+//     } catch (error) {
+//         console.error('Error fetching devices:', error);
+//         res.status(500).json({
+//             success: false,
+//             message: 'Internal server error',
+//             error: error.message
+//         });
+//     }
+// };
 
 
 //update request

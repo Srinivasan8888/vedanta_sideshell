@@ -2,7 +2,9 @@ import express from 'express';
 import {
     createReport, createAlert, SetColorRange, deleteReport,
     updateReport, getColorRangeModel, updateUser, deleteUser, getUserDetails,
-    updateAlert, deleteAlert, createSetAlert, getCombinedAlertAndFrequency,updateDevice, deleteDevice, createDevice, getAllDevices, getLimitsValue, createLimitsValue, getAlertsByDateRange, getUserLogs, getAllAlerts, getUserAlertRange, SaveAlertRange, SetAlertFrequency, getAlertFrequency, AlertfreqUsers, alertFrequency, reportUsers, getFrequency, getUsers
+    updateAlert, deleteAlert, createSetAlert, getCombinedAlertAndFrequency, updateDevice, deleteDevice, createDevice,
+    getLimitsValue, createLimitsValue, getAlertsByDateRange, getUserLogs, getAllAlerts, getUserAlertRange, SaveAlertRange,
+    SetAlertFrequency, getAlertFrequency, AlertfreqUsers, alertFrequency, reportUsers, getFrequency, getUsers
 } from '../Controller/Admin.Controller.js';
 
 const router = express.Router();
@@ -31,8 +33,8 @@ router.get('/getColorRange', getColorRangeModel);
 router.get('/getUsers', getUsers)
 router.get('/getAllAlerts', getAllAlerts)
 router.get('/getAlertsByDateRange', getAlertsByDateRange)
-router.get('/getUserLogs', getUserLogs) 
-router.get('/getAllDevices', getAllDevices)
+router.get('/getUserLogs', getUserLogs)
+// router.get('/getAllDevices', getAllDevices)
 
 //update request
 router.put('/updateReport', updateReport)

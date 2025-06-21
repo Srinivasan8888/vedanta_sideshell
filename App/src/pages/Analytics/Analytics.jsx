@@ -110,11 +110,11 @@ const Analytics = () => {
             </div>
           </div>
         </div>
-        <div className="md:flex md:h-[270px] lg:h-[43%] xl:h-[58%] custom-md-air:h-[400px]">
-          <div className="m-4 h-[700px] rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:h-full md:w-full">
+       
+          <div className="m-4 h-[700px] rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:h-[100%] md:w-full">
             <AnalyticsChart data={fetchedData} />
           </div>
-        </div>
+        
       </div>
     </div>
   );
