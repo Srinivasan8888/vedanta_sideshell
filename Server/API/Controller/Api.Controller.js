@@ -177,59 +177,103 @@ class ApiController {
           hour12: true 
         });
 
-        // Get one record per waveguide closest to the point time
-        const [wg1Record, wg2Record] = await Promise.all([
-          sensormodel.findOne({
+        // Get all records within the current interval
+        const startTimeStr = this._formatTimeForDB(pointTime);
+        const endTimeStr = this._formatTimeForDB(i === 0 ? new Date() : new Date(pointEndTime.getTime() + 1));
+        
+        const [wg1Records, wg2Records] = await Promise.all([
+          sensormodel.find({
             id,
             waveguide: 'WG1',
-            TIME: { $lte: this._formatTimeForDB(pointEndTime) }
-          }).sort({ TIME: -1 }).lean(),
-          sensormodel.findOne({
+            TIME: { $gte: startTimeStr, $lte: endTimeStr }
+          }).sort({ TIME: 1 }).lean(),
+          sensormodel.find({
             id,
             waveguide: 'WG2',
-            TIME: { $lte: this._formatTimeForDB(pointEndTime) }
-          }).sort({ TIME: -1 }).lean()
+            TIME: { $gte: startTimeStr, $lte: endTimeStr }
+          }).sort({ TIME: 1 }).lean()
         ]);
+        
+        // Get the latest record for display
+        const wg1Record = wg1Records[wg1Records.length - 1];
+        const wg2Record = wg2Records[wg2Records.length - 1];
 
         // Process WG1 data
+        const wg1AllValues = [];
         const wg1Values = [];
-        if (wg1Record) {
-          Object.entries(wg1Record).forEach(([key, value]) => {
+        
+        // Process all WG1 records for the interval
+        wg1Records.forEach(record => {
+          Object.entries(record).forEach(([key, value]) => {
             if (key.startsWith('sensor') && value !== 'null') {
               const num = parseFloat(value);
-              if (!isNaN(num)) wg1Values.push(num);
+              if (!isNaN(num)) {
+                wg1AllValues.push(num);
+                if (record === wg1Record) wg1Values.push(num);
+              }
             }
           });
-        }
+        });
 
         // Process WG2 data
+        const wg2AllValues = [];
         const wg2Values = [];
-        if (wg2Record) {
-          Object.entries(wg2Record).forEach(([key, value]) => {
+        
+        // Process all WG2 records for the interval
+        wg2Records.forEach(record => {
+          Object.entries(record).forEach(([key, value]) => {
             if (key.startsWith('sensor') && value !== 'null') {
               const num = parseFloat(value);
-              if (!isNaN(num)) wg2Values.push(num);
+              if (!isNaN(num)) {
+                wg2AllValues.push(num);
+                if (record === wg2Record) wg2Values.push(num);
+              }
             }
           });
-        }
+        });
 
-        // Calculate averages
-        const allValues = [...wg1Values, ...wg2Values];
+        // Calculate statistics for the interval
+        const allValues = [...wg1AllValues, ...wg2AllValues];
+        const currentValues = [...wg1Values, ...wg2Values];
+        
+        // Helper function to calculate statistics
+        const calculateStats = (values) => {
+          if (values.length === 0) return { average: null, max: null, min: null };
+          return {
+            average: this._calculateAverage(values),
+            max: Math.max(...values),
+            min: Math.min(...values)
+          };
+        };
+        
+        const allStats = calculateStats(allValues);
+        const wg1Stats = calculateStats(wg1AllValues);
+        const wg2Stats = calculateStats(wg2AllValues);
         
         intervalData.push({
           time: timeLabel,
           timestamp: pointEndTime.toISOString(),
           interval: Interval,
-          averageTemperature: this._calculateAverage(allValues),
-          totalReadings: allValues.length,
+          statistics: {
+            average: allStats.average,
+            max: allStats.max,
+            min: allStats.min,
+            totalReadings: allValues.length
+          },
+          currentTemperature: this._calculateAverage(currentValues),
+          currentReadings: currentValues.length,
           waveguides: {
             WG1: {
-              average: this._calculateAverage(wg1Values),
-              readings: wg1Values.length
+              ...wg1Stats,
+              current: this._calculateAverage(wg1Values),
+              readings: wg1AllValues.length,
+              currentReadings: wg1Values.length
             },
             WG2: {
-              average: this._calculateAverage(wg2Values),
-              readings: wg2Values.length
+              ...wg2Stats,
+              current: this._calculateAverage(wg2Values),
+              readings: wg2AllValues.length,
+              currentReadings: wg2Values.length
             }
           }
         });

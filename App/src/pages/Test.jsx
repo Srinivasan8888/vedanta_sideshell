@@ -1,10 +1,9 @@
 import React from 'react'
-import Notifications from "../Assets/components/Dashboard/Notifications";
-import AlertBox from '../Assets/components/Dashboard/AlertBox';
+import Generatereport from '../Assets/components/sidebar-admins/components/Generatereport';
 const Test = () => {
   return (
    <div>
-   <AlertBox/>
+   <Generatereport/>
    </div>
   )
 }

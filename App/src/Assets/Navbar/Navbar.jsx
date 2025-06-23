@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IoMdSettings, IoMdLogOut } from 'react-icons/io';
 import { IoNotifications } from 'react-icons/io5';
 import { Combobox, Transition } from '@headlessui/react';
-
+import axios from 'axios';
 // Assets
 import logo from '../../Assets/images/Vedanta-Logo.png';
 import xyma_logo from '../../Assets/images/Xyma-Logo.png';
@@ -78,7 +78,21 @@ const SvgIcon = ({ icon, className = 'w-5 h-5', ...props }) => (
 );
 
 const Navbar = () => {
-  const [selectedPerson, setSelectedPerson] = useState(DEVICE_LIST[0]);
+  const [selectedPerson, _setSelectedPerson] = useState(() => {
+    // Load the saved device from localStorage or default to the first device
+    const savedDeviceId = localStorage.getItem('id');
+    return savedDeviceId 
+      ? DEVICE_LIST.find(device => device.id === Number(savedDeviceId)) || DEVICE_LIST[0]
+      : DEVICE_LIST[0];
+  });
+
+  // Custom setter that updates both state and localStorage
+  const setSelectedPerson = (device) => {
+    _setSelectedPerson(device);
+    if (device && device.id) {
+      localStorage.setItem('id', device.id.toString());
+    }
+  };
   const [query, setQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -92,10 +106,29 @@ const Navbar = () => {
   const gotoSettings = () => navigate('/Settings');
   const gotoHeatmap = () => navigate('/Heatmap');
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+    const refreshToken = localStorage.getItem("refreshToken");
+    const email = localStorage.getItem('email');
+    
+    // Clear storage immediately for instant feedback
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+    
+    // Navigate to home immediately
+    navigate('/');
+    
+    // Fire and forget the logout request to the server
+    // Don't wait for response to make logout feel instant
+    if (refreshToken && email) {
+      axios.delete(
+        `${process.env.REACT_APP_SERVER_URL}auth/logout`,
+        {
+          data: { refreshToken, email },
+          headers: { "Content-Type": "application/json" },
+        }
+      ).catch(console.error); // Silently fail if server logout fails
+    }
   };
-
   // Close mobile menu when route changes
   React.useEffect(() => {
     setIsMobileMenuOpen(false);

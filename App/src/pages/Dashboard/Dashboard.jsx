@@ -122,17 +122,85 @@ const Dashboard = () => {
     }
   }, [scrollPosition, scrollAmount]);
 
-  useEffect(() => {
-    // In a real app, you would fetch this data from an API
-    setSensors(generateSensorData());
+  const [previousSensorData, setPreviousSensorData] = useState({});
 
-    // Update data every 5 seconds
-    const interval = setInterval(() => {
-      setSensors(generateSensorData());
-    }, 5000);
+  const fetchSensorData = useCallback(async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_SERVER_URL}api/v2/getallsensor?id=XY001`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch sensor data');
+      }
+      const apiData = await response.json();
+      
+      // Transform API data to match the expected sensor format
+      const formattedSensors = [];
+      const currentTime = new Date().getTime();
+      
+      apiData.forEach((waveguide) => {
+        // Extract sensor values from the waveguide data
+        Object.entries(waveguide).forEach(([key, value]) => {
+          if (key.startsWith('sensor') && value !== null && value !== undefined) {
+            const sensorNumber = key.replace('sensor', '');
+            const sensorId = `${waveguide.waveguide}-${sensorNumber}`;
+            const currentValue = parseFloat(value);
+            
+            // Calculate difference from previous reading
+            let difference = 0;
+            let isPositive = true;
+            
+            if (previousSensorData[sensorId]) {
+              difference = currentValue - previousSensorData[sensorId].value;
+              isPositive = difference >= 0;
+              difference = Math.abs(difference).toFixed(2);
+            }
+            
+            formattedSensors.push({
+              id: sensorId,
+              name: `${waveguide.waveguide} Sensor ${sensorNumber}`,
+              value: currentValue.toFixed(2),
+              difference: difference,
+              isPositive: isPositive,
+              waveguide: waveguide.waveguide,
+              timestamp: waveguide.TIME || new Date().toISOString()
+            });
+          }
+        });
+      });
+      
+      // Update previous sensor data for next comparison
+      const newPreviousData = {};
+      formattedSensors.forEach(sensor => {
+        newPreviousData[sensor.id] = {
+          value: parseFloat(sensor.value),
+          timestamp: sensor.timestamp
+        };
+      });
+      setPreviousSensorData(prev => ({
+        ...prev,
+        ...newPreviousData
+      }));
+      
+      setSensors(formattedSensors);
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+      // Only fall back to mock data if we don't have any data yet
+      if (sensors.length === 0) {
+        setSensors(generateSensorData());
+      }
+    }
+  }, [previousSensorData, sensors.length]);
+
+  useEffect(() => {
+    // Initial fetch
+    fetchSensorData();
+
+    // Set up polling every 5 seconds
+    const interval = setInterval(fetchSensorData, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchSensorData]);
+
+  
   return (
     <div className="h-full w-full">
       <div className="flex flex-col h-full w-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2 gap-4 p-1">
@@ -204,9 +272,9 @@ const Dashboard = () => {
                     ))}
                   </div>
 
-                  <div className="hidden 2xl:flex space-x-2 p-1">
+                  <div className="hidden 2xl:flex space-x-4 mt-5  p-1">
                     {Array(Math.ceil(sensors.length / 4)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none w-40 space-y-3">
+                      <div key={colIndex} className="flex-none w-40 space-y-2">
                         {sensors.slice(
                           colIndex * 4,
                           colIndex * 4 + 4
