@@ -1,11 +1,22 @@
 import React, { useState } from "react";
 import * as XLSX from 'xlsx/xlsx.mjs';
 import API from "../Axios/AxiosInterceptor";
+import Dropdown from "./Dropdown";
+import DropdownSides from "./Dropdown-sides";
 
 const CountData = () => {
   const [selectedDrop, setSelecteddrop] = useState("");
   const [showTextBox, setShowTextBox] = useState(false);
   const [customLimit, setCustomLimit] = useState("");
+  const [selectedside, setSelectedside] = useState("");
+  const [selected, setSelected] = useState("");
+
+  const handleRadioChange = (event) => {
+    setSelected(event.target.value);
+  };
+  const handleRadioChangeSide = (event) => {
+    setSelectedside(event.target.value);
+  };
 
   const handleradiocustom = (event) => {
     const value = event.target.value;
@@ -72,11 +83,27 @@ const CountData = () => {
   );
 
   return (
-    <div className="md:h-full xl:w-[50%] w-[100%] md:p-4 xl:p-0">
+    <div className="md:h-full xl:w-[70%] w-[100%] md:p-4 xl:p-0">
       <div className="md:h-[16%] flex flex-row justify-center items-end md:text-3xl md:font-semibold md:mt-0 mt-4">
-      Select Count
+        Select Count
       </div>
-      <div className="flex flex-col md:h-[60%] gap-10 justify-center mx-16 mt-10 md:mt-0">
+      <div>
+
+        <div className="flex flex-col items-center justify-between  mt-10 md:flex-row ">
+          <div className="items-start text-xl font-normal">Configuration</div>
+          <Dropdown selected={selected} setSelected={setSelected} />
+
+        </div>
+
+        <div className="flex flex-col items-center justify-between mt-10 md:flex-row">
+          <div className="items-start text-xl font-normal">Select Sides</div>
+          <DropdownSides selectedside={selectedside} setSelectedside={setSelectedside} />
+
+        </div>
+      </div>
+
+
+      <div className="flex flex-col md:h-[40%] gap-10 justify-center mx-16 mt-10 md:mt-0">
         {renderRadioButton("100", "Last 100 Data")}
         {renderRadioButton("500", "Last 500 Data")}
         {renderRadioButton("1000", "Last 1000 Data")}

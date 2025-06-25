@@ -92,7 +92,7 @@ const AnalyticsChart = ({ data }) => {
   };
 
   return (
-    <div className="bg-[rgba(16,16,16,0.7)] rounded-xl relative h-full">
+    <div className="bg-[rgba(16,16,16,0.7)] rounded-xl relative">
       {/* Display the number of data points in the top-right corner */}
       <div className="absolute top-0 left-0 px-2 py-1 text-sm text-white bg-black bg-opacity-50 rounded rounded-tl-xl">
         Data Points: {dataPointsCount}

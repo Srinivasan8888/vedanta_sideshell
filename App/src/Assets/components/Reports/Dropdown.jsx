@@ -5,22 +5,28 @@ import axios from "axios";
 const Dropdown = ({ selected, setSelected }) => {
     const [options, setOptions] = useState([]);
 
+    // useEffect(() => {
+    //     const fetchOptions = async () => {
+    //         try {
+    //             const response = await axios.get(`${process.env.REACT_APP_SERVER_URL}api/v2/getcbname`);
+    //             setOptions(response.data);
+    //         } catch (error) {
+    //             console.error("Error fetching data:", error);
+    //         }
+    //     };
+    //     fetchOptions();
+    // }, []);
+
+    // const handleRadioChange = (option) => {
+    //   setSelected(option); // Update to set the selected option directly
+    // };
+
     useEffect(() => {
-        const fetchOptions = async () => {
-            try {
-                const response = await axios.get(`${process.env.REACT_APP_SERVER_URL}api/v2/getcbname`);
-                setOptions(response.data);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            }
-        };
-        fetchOptions();
+      // Generate "Sensor1" to "Sensor12"
+      const sensors = Array.from({ length: 12 }, (_, i) => `sensor${i + 1}`);
+      setOptions(sensors);
     }, []);
-
-    const handleRadioChange = (option) => {
-      setSelected(option); // Update to set the selected option directly
-    };
-
+    
     
   return (
      <div className="items-end justify-end mt-4 ml-2 md:mt-0">
@@ -52,7 +58,7 @@ const Dropdown = ({ selected, setSelected }) => {
          <MenuItem>
               <button
                 type="button" 
-                onClick={() => setSelected("All-Data")} 
+                onClick={() => setSelected("all-data")} 
                 className="block w-full px-4 py-2 text-left text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none"
               >
                 All-Data

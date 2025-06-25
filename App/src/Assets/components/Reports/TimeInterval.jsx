@@ -1,21 +1,27 @@
 import React, { useState } from "react";
 import Dropdown from "./Dropdown";
 import * as XLSX from 'xlsx/xlsx.mjs';
-import axios from "axios";
+import DropdownSides from "./Dropdown-sides";
+import API from "../Axios/AxiosInterceptor";
 
 const TimeInterval = () => {
   const [selected, setSelected] = useState("");
   const [average, setAverage] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [selectedside, setSelectedside] = useState("");
 
   const handleRadioChange = (event) => {
     setSelected(event.target.value);
   };
+  
+  const handleRadioChangeSide = (event) => {
+    setSelectedside(event.target.value);
+  };
 
   const averageradio = (event) => {
     setAverage(event.target.value);
-    console.log("Selected Radio Value:", event.target.value); // Log the selected value
+    // console.log("Selected Radio Value:", event.target.value); // Log the selected value
   };
 
 
@@ -23,75 +29,95 @@ const TimeInterval = () => {
     const { name, value } = event.target;
     if (name === "startdate") {
       setStartDate(value);
-      console.log("Start Date:", value);
+      // console.log("Start Date:", value);
     } else if (name === "enddate") {
       setEndDate(value);
-      console.log("End Date:", value);
+      // console.log("End Date:", value);
     }
   };
-  
-  const downloadexcel = () => {
-   
-    
-    if (!startDate || !endDate) {
-      alert("Please select both start and end dates.");
-    } else if (!average) {
-      alert("Please select the average.");
-    } else if (!selected) {
-      alert("Please select a configuration.");
-    } else {
-      const apidate = async () => {
-        if (selected !== null) {
+
+    const downloadexcel = () => {
+      if (!startDate || !endDate) {
+        alert("Please select both start and end dates.");
+      } else if (!average) {
+        alert("Please select the average.");
+      } else if (!selected) {
+        alert("Please select a configuration.");
+      } else if (!selectedside) {
+        alert("Please select a side.");
+      } else {
+        const apidate = async () => {
           try {
-            const response = await axios.get(`${process.env.REACT_APP_SERVER_URL}api/v2/getIntervalExcel?key=${selected}&startDate=${startDate}&endDate=${endDate}&average=${average}`);
-            console.log(response);
-              const data = response.data;
-              console.log(data);
-  
-              if (data == null || data.length === 0 ) {
-                alert("No data found.");
-                return;
-              }
-  
+            // Build query parameters
+            const params = new URLSearchParams({
+              sensorrange: selected,
+              sides: selectedside,
+              startDate: startDate,
+              endDate: endDate,
+              averageBy: average
+            });
 
-              if (Array.isArray(data)) {
-                const modifiedData = data.map((obj) => {
-                  const { _id, __v, updatedAt, ...rest } = obj;
-                  return rest;
-                });
+            const response = await API.get(
+              `${process.env.REACT_APP_SERVER_URL}api/v2/getReportPerData?${params.toString()}`
+            );
+            
+            console.log('API Response:', response);
+            const responseData = response.data?.data || [];
+            console.log('Response Data:', responseData);
   
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.json_to_sheet(modifiedData);
-                XLSX.utils.book_append_sheet(wb, ws, "Data");
-              const currentTime = new Date().toLocaleString().replace(/:/g, '-');
-              XLSX.writeFile(wb, `${selected} Interval_report_${currentTime}.xlsx`);
-              console.log("Data:", modifiedData);
-            } else {
-              console.error("Data received is not an array:", data);
+            if (!responseData || responseData.length === 0) {
+              alert("No data found for the selected criteria.");
+              return;
             }
-          } catch (error) {
-            console.error("Error fetching data:", error);
-          }
-        }
-      };
 
-      apidate();
-    }
-  };
+            // Format data for Excel - exclude metadata and count fields
+            const excelData = responseData.map(({ timestamp, count, ...rest }) => ({
+              timestamp: new Date(timestamp).toLocaleString(),
+              ...Object.keys(rest).reduce((acc, key) => {
+                // Only include sensor data fields (like sensor1, sensor2, etc.)
+                if (key !== 'metadata' && key !== 'count') {
+                  acc[key] = rest[key];
+                }
+                return acc;
+              }, {})
+            }));
+  
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            XLSX.utils.book_append_sheet(wb, ws, "Data");
+            
+            const currentTime = new Date().toLocaleString().replace(/:/g, '-');
+            XLSX.writeFile(wb, `${selected}_${selectedside}_${average}_report_${currentTime}.xlsx`);
+            console.log("Data exported to Excel:", excelData);
+          } catch (error) {
+            console.error("Error fetching or processing data:", error);
+            alert("An error occurred while processing your request. Please try again.");
+          }
+        };
+  
+        apidate();
+      }
+    };
   return (
     <>
       <div className="md:h-full   md:p-4 xl:p-0 xl:w-[50%] w-[100%] md:mb-0 ">
-      <div className="md:h-[16%] flex flex-row justify-center items-end md:text-3xl md:font-semibold md:mt-0 mt-4">
-      Select Time Interval
+        <div className="md:h-[16%] flex flex-row justify-center items-end md:text-3xl md:font-semibold md:mt-0 mt-4">
+          Select Time Interval
         </div>
         <div className="flex flex-col md:h-[40%] gap-10 justify-center mx-16">
           <div className="flex flex-col items-center justify-between mt-10 md:flex-row">
             <div className="items-start text-xl font-normal">Configuration</div>
-            <Dropdown selected={selected} setSelected={setSelected}/>
+            <Dropdown selected={selected} setSelected={setSelected} />
+          </div>
+          <div className="flex flex-col items-center justify-between  md:flex-row">
+            <div className="items-start text-xl font-normal">Select Sides</div>
+            <DropdownSides selectedside={selectedside} setSelectedside={setSelectedside} />
+
           </div>
 
           <div className="flex flex-col items-center justify-between md:flex-row">
-            <div className="text-xl font-normal text-start">From</div>
+            <div className="text-xl font-normal text-star
+            t">From</div>
             <div>
               <input
                 type="date"
@@ -160,7 +186,7 @@ const TimeInterval = () => {
         <div className="flex md:h-[15%] text-lg font-bold justify-center item-center md:pt-8 mb-4 md:mb-0">
           <div className="flex items-center justify-center w-56 h-16 bg-[rgba(232,235,236,1)] rounded-lg text-black">
             <button className="flex items-center"
-            onClick={ downloadexcel}>
+              onClick={downloadexcel}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
