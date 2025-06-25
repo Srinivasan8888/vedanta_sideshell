@@ -882,6 +882,140 @@ class ApiController {
     }
   }
 
+  async reportCountData(req, res) {
+    console.log('reportCountData called with params:', req.query);
+    console.log('Headers:', req.headers);
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({ error: 'User ID is required in headers' });
+      }
+  
+      // Get query parameters
+      const { sensorrange, sides, count } = req.query;
+  
+      // Validate parameters
+      if (!sensorrange || !sides || !count) {
+        return res.status(400).json({ 
+          error: 'Missing required parameters',
+          required: ['sensorrange', 'sides', 'count']
+        });
+      }
+  
+      // Parse and validate count
+      let recordLimit = parseInt(count, 10);
+      if (isNaN(recordLimit) || recordLimit <= 0) {
+        return res.status(400).json({ 
+          error: 'Invalid count parameter. Must be a positive integer.',
+          validExamples: [100, 500, 1000]
+        });
+      }
+  
+      // Set a maximum limit to prevent excessive load
+      const MAX_LIMIT = 5000;
+      if (recordLimit > MAX_LIMIT) {
+        return res.status(400).json({ 
+          error: `Count exceeds maximum allowed value of ${MAX_LIMIT}`,
+          maxAllowed: MAX_LIMIT
+        });
+      }
+  
+      // Build query (without date range)
+      const query = { 
+        id
+      };
+  
+      // Handle sides
+      if (sides === 'Aside') {
+        query.waveguide = 'WG1';
+      } else if (sides === 'Bside') {
+        query.waveguide = 'WG2';
+      } else if (sides === 'Allside') {
+        query.waveguide = { $in: ['WG1', 'WG2'] };
+      }
+  
+      console.log('Executing query:', JSON.stringify(query, null, 2));
+      
+      // Fetch records with limit applied
+      let results;
+      try {
+        // Fetch records sorted by createdAt descending (newest first)
+        results = await sensormodel.find(query)
+          .sort({ createdAt: -1 })  // Get newest records first
+          .limit(recordLimit)       // Apply count limit
+          .lean();
+  
+        // Reverse to get chronological order (oldest first)
+        results.reverse();
+        
+        console.log(`Found ${results?.length || 0} records`);
+  
+        // Process results
+        results = results.map(doc => {
+          const processedDoc = {
+            ...doc,
+            waveguide: doc.waveguide === 'WG1' ? 'Aside' : 'Bside'
+          };
+          
+          // Remove unnecessary fields
+          delete processedDoc._id;
+          delete processedDoc.id;
+          delete processedDoc.updatedAt;
+          delete processedDoc.__v;
+          delete processedDoc.createdAt;
+          
+          // Filter sensor data based on requested range
+          if (sensorrange.toLowerCase() !== 'all-data') {
+            let startSensor = 1;
+            let endSensor = 38;
+            
+            // Parse sensor range
+            const rangeMatch = sensorrange.match(/^(\d+)-(\d+)$/);
+            if (rangeMatch) {
+              startSensor = parseInt(rangeMatch[1], 10);
+              endSensor = parseInt(rangeMatch[2], 10);
+            } else if (sensorrange.toLowerCase().startsWith('sensor')) {
+              const sensorNum = parseInt(sensorrange.replace(/\D/g, ''), 10);
+              if (!isNaN(sensorNum)) {
+                startSensor = sensorNum;
+                endSensor = sensorNum;
+              }
+            }
+            
+            // Remove sensors outside the requested range
+            for (let i = 1; i <= 38; i++) {
+              if (i < startSensor || i > endSensor) {
+                delete processedDoc[`sensor${i}`];
+              }
+            }
+          }
+          
+          return processedDoc;
+        });
+      } catch (error) {
+        console.error('Query error:', error);
+        throw new Error(`Failed to fetch data: ${error.message}`);
+      }
+  
+      res.json({
+        success: true,
+        data: results,
+        metadata: {
+          sensorRange: sensorrange.toLowerCase() === 'all-data' ? '1-38' : sensorrange,
+          side: sides,
+          recordLimit: recordLimit,
+          returnedRecords: results.length
+        }
+      });
+  
+    } catch (error) {
+      console.error('Error in reportCountData:', error);
+      res.status(500).json({ 
+        error: 'An error occurred while generating the report',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
 }
 
 export const apiController = new ApiController();

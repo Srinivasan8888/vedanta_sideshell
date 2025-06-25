@@ -27,34 +27,63 @@ const CountData = () => {
 
   const downloadexcel = async () => {
     if (!selectedDrop) {
-      alert("Please select a limit.");
+      alert("Please select a record count.");
+      return;
+    }
+
+    if (!selected) {
+      alert("Please select a configuration.");
+      return;
+    }
+
+    if (!selectedside) {
+      alert("Please select a side.");
       return;
     }
 
     try {
-      let limit = selectedDrop === "custom" ? customLimit : selectedDrop;
-      const response = await API.get(`${process.env.REACT_APP_SERVER_URL}api/v2/getLimit?key=All-Data&limit=${limit}`);
-      const data = response.data;
+      const count = selectedDrop === "custom" ? customLimit : selectedDrop;
+      
+      // Build query parameters
+      const params = new URLSearchParams({
+        sensorrange: selected,
+        sides: selectedside,
+        count: count
+      });
 
-      if (!data || data.length === 0) {
-        alert("No data found.");
+      console.log('Fetching data with params:', params.toString());
+      
+      const response = await API.get(
+        `${process.env.REACT_APP_SERVER_URL}api/v2/getReportCountData?${params.toString()}`
+      );
+      
+      console.log('API Response:', response);
+      const responseData = response.data?.data || [];
+      
+      if (!responseData || responseData.length === 0) {
+        alert("No data found for the selected criteria.");
         return;
       }
 
-      if (Array.isArray(data)) {
-        const modifiedData = data.map(({ _id, __v, updatedAt, ...rest }) => rest);
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(modifiedData);
-        XLSX.utils.book_append_sheet(wb, ws, "Data");
-        const currentTime = new Date().toLocaleString().replace(/:/g, '-');
-        XLSX.writeFile(wb, `Interval_report_${currentTime}.xlsx`);
-        console.log("Data:", modifiedData);
-      } else {
-        console.error("Data received is not an array:", data);
-      }
+      // Format data for Excel
+      const excelData = responseData.map(({ timestamp, ...rest }) => ({
+        timestamp: timestamp ? new Date(timestamp).toLocaleString() : 'N/A',
+        ...rest
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      XLSX.utils.book_append_sheet(wb, ws, "Data");
+      
+      const currentTime = new Date().toLocaleString().replace(/:/g, '-').replace(/,/g, '');
+      const filename = `${selected}_${selectedside}_${count}_records_${currentTime}.xlsx`;
+      
+      XLSX.writeFile(wb, filename);
+      console.log("Data exported to Excel:", excelData);
+      
     } catch (error) {
-      console.error("Error fetching data:", error);
-      alert("An error occurred while fetching data. Please try again.");
+      console.error("Error fetching or processing data:", error);
+      alert("An error occurred while processing your request. Please try again.");
     }
   };
 
@@ -83,7 +112,7 @@ const CountData = () => {
   );
 
   return (
-    <div className="md:h-full xl:w-[70%] w-[100%] md:p-4 xl:p-0">
+    <div className="md:h-full xl:w-[70%] w-[100%] md:p-4 xl:p-0 xl:overflow-hidden">
       <div className="md:h-[16%] flex flex-row justify-center items-end md:text-3xl md:font-semibold md:mt-0 mt-4">
         Select Count
       </div>
@@ -95,7 +124,7 @@ const CountData = () => {
 
         </div>
 
-        <div className="flex flex-col items-center justify-between mt-10 md:flex-row">
+        <div className="flex flex-col items-center justify-between mt-10 mb-5 md:flex-row">
           <div className="items-start text-xl font-normal">Select Sides</div>
           <DropdownSides selectedside={selectedside} setSelectedside={setSelectedside} />
 

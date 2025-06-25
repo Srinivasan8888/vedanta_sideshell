@@ -10,6 +10,7 @@ router.get('/getAverageTempbyHour',  apiController.AverageTempbyHour);
 router.get('/getReportAverageData',  apiController.reportAverageData);
 router.get('/getReportPerData',  apiController.reportPerData);
 router.get('/getReportDateData',  apiController.reportDateData);
+router.get('/getReportCountData', apiController.reportCountData);
 // router.get('/getAside', verifyAccessToken, ApiController.Aside);
 // router.get('/getBside', verifyAccessToken, ApiController.Bside);
 // router.get('/getcollectorbar', verifyAccessToken, ApiController.collectorbar);
