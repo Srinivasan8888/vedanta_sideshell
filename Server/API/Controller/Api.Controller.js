@@ -1195,9 +1195,6 @@ class ApiController {
         // Sort by date
         { $sort: { date: 1 } }
       ];
-
-      // Add debug logging
-      console.log('Pipeline:', JSON.stringify(pipeline, null, 2));
       
       // First, check if we have any matching documents
       const count = await sensormodel.countDocuments({
@@ -1208,21 +1205,61 @@ class ApiController {
         }
       });
       
-      console.log(`Found ${count} matching documents for waveguide: ${waveguide}`);
+      
       
       if (count === 0) {
         // Try to find any data to debug the date format
         const sampleDoc = await sensormodel.findOne({ waveguide: waveguide });
-        console.log('Sample document TIME format:', sampleDoc?.TIME);
-        console.log('Sample document waveguide:', sampleDoc?.waveguide);
-        console.log('Sample document:', JSON.stringify(sampleDoc, null, 2));
+      
       }
 
-      // Execute the aggregation pipeline with error handling
+      // Execute the main aggregation pipeline for daily data
       let dailyData = [];
+      let topValues = [];
+      
       try {
+        // Get daily data
         dailyData = await sensormodel.aggregate(pipeline);
-        console.log('Aggregation result:', JSON.stringify(dailyData, null, 2));
+        
+        // Create a separate pipeline for top 8 values
+        const topValuesPipeline = [
+          ...baseStages,
+          // Sort by value (ascending for min, descending for max)
+          {
+            $sort: {
+              numericValue: value.toLowerCase() === 'min' ? 1 : -1
+            }
+          },
+          // Group by sensor to get the extreme value for each sensor
+          {
+            $group: {
+              _id: "$sensors.k",
+              sensorName: { $first: "$sensors.k" },
+              value: { $first: "$numericValue" },
+              date: { $first: "$date" }
+            }
+          },
+          // Sort and limit to top 8
+          {
+            $sort: {
+              value: value.toLowerCase() === 'min' ? 1 : -1
+            }
+          },
+          { $limit: 8 },
+          // Format the output
+          {
+            $project: {
+              _id: 0,
+              sensorName: 1,
+              value: { $round: ["$value", 2] },
+              date: 1
+            }
+          }
+        ];
+        
+        // Get top 8 values
+        topValues = await sensormodel.aggregate(topValuesPipeline);
+     
       } catch (error) {
         console.error('Aggregation error:', error);
         throw error;
@@ -1233,7 +1270,8 @@ class ApiController {
         startDate: start.toISOString().split('T')[0],
         endDate: end.toISOString().split('T')[0],
         valueType: value.toLowerCase(),
-        data: dailyData
+        data: dailyData,
+        topValues: topValues  // Add top 8 values to the response
       };
 
       res.status(200).json(result);

@@ -23,7 +23,7 @@ const Analytics = () => {
   return (
 
     <div className="m-4 rounded-lg border border-white bg-[rgba(16,16,16,0.75)] text-white md:h-[95%]">
-      <div className="m-4 gap-3 md:grid md:grid-cols-2 xl:flex xl:grid-cols-none">
+      <div className="m-4 gap-3 md:grid md:grid-cols-2 xl:flex xl:grid-cols-none md:h-[40%] h-[1100px] ">
         <AnalyticsButton
           selectedButton={selectedButton}
           setSelectedButton={setSelectedButton}
@@ -123,7 +123,7 @@ const Analytics = () => {
         </div>
       </div>
 
-      <div className="flex-1 h-[700px] md:min-h-[58%]  rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:w-full  ">
+      <div className="flex-1 h-[700px]  md:h-[56%]  rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:w-full  ">
         <div className="h-full w-full">
           <AnalyticsChart data={fetchedData} />
         </div>

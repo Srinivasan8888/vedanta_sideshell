@@ -173,46 +173,40 @@ const Heatmap = () => {
               </p>
 
               <div className="grid grid-cols-2 gap-4 px-4 md:h-[100%] md:grid-cols-4 md:grid-rows-2 xl:h-[75%] xl:grid-cols-8 xl:grid-rows-1">
-                {combinedData.length > 0 ? (
-                  combinedData.map((data, index) => {
-                    const valueData = switcherValue === "min" 
-                      ? heatmapData.minvalue?.[data.key] 
-                      : heatmapData.maxvalue?.[data.key];
-
-                    return (
-                      <div
-                        key={index}
-                        className="flex h-full flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)]"
-                      >
-                        <p className={`text-sm font-semibold md:text-xl ${
-                          switcherValue === "min" ? "text-blue-400" : "text-blue-400"
-                        }`}>
-                          {valueData ? valueData.toFixed(2) : "N/A"}
-                        </p>
-                        <p>
-                          {switcherValue === "max" ? "Max of" : "Min of"}{" "}
-                          <span className="text-sm text-white md:text-md">
-                            {data.key || "Data"}
-                          </span>
-                        </p>
-                      </div>
-                    );
-                  })
+                {heatmapData?.topValues?.length > 0 ? (
+                  heatmapData.topValues.map((sensor, index) => (
+                    <div
+                      key={`${sensor.sensorName}-${index}`}
+                      className="flex h-full flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)] p-2"
+                    >
+                      <p className="text-sm font-semibold text-blue-400 md:text-xl">
+                        {sensor.value?.toFixed(2) || "N/A"}
+                      </p>
+                      <p className="text-center text-xs text-white md:text-sm">
+                        {sensor.sensorName}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(sensor.date).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short'
+                        })}
+                      </p>
+                    </div>
+                  ))
                 ) : (
-                  <>
-                    {[...Array(8)].map((_, index) => (
-                      <div className="flex h-full flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)]">
-                        <div
-                          key={index}
-                          className="flex h-full w-[40%] items-center justify-center rounded-lg m-3"
-                        >
-                          <div className="text-xl font-semibold text-[rgb(39,129,255)]">
-                            No Data Available
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </>
+                  [...Array(8)].map((_, index) => (
+                    <div 
+                      key={index}
+                      className="flex h-full flex-col items-center justify-center rounded-lg border border-white bg-[rgba(16,16,16,0.8)] p-2"
+                    >
+                      <p className="text-sm font-semibold text-gray-400 md:text-xl">
+                        N/A
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        No data
+                      </p>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
