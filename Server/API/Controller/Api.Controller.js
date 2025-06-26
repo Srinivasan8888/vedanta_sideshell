@@ -882,7 +882,7 @@ class ApiController {
     }
   }
 
-  async reportCountData(req, res) {
+  async reportCountData(req, mres) {
     console.log('reportCountData called with params:', req.query);
     console.log('Headers:', req.headers);
     try {
@@ -1016,6 +1016,237 @@ class ApiController {
       });
     }
   }
+
+  async heatmapData(req, res) {   
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({ error: 'User ID is required in headers' });
+      }
+
+      // Extract and validate query parameters
+      const { side, startDate, endDate, value } = req.query;
+
+      // Validate required parameters
+      const sideUpper = side?.toUpperCase();
+      if (!side || !['ASIDE', 'BSIDE'].includes(sideUpper)) {
+        return res.status(400).json({ error: 'Valid side parameter is required (ASide or BSide)' });
+      }
+      
+      // Map frontend side values to database waveguide values
+      const waveguideMap = {
+        'ASIDE': 'WG1',
+        'BSIDE': 'WG2'
+      };
+      const waveguide = waveguideMap[sideUpper];
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({ error: 'Both startDate and endDate parameters are required' });
+      }
+
+      if (!value || !['min', 'max'].includes(value.toLowerCase())) {
+        return res.status(400).json({ error: 'Valid value parameter is required (min or max)' });
+      }
+
+      // Parse dates
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ error: 'Invalid date format. Please use ISO 8601 format (e.g., 2023-01-01T00:00:00.000Z)' });
+      }
+
+      if (start > end) {
+        return res.status(400).json({ error: 'startDate must be before endDate' });
+      }
+
+      // Create base pipeline stages
+      const baseStages = [
+        // Match documents within the date range and for the specified side
+        {
+          $match: {
+            waveguide: waveguide,
+            TIME: {
+              $gte: new Date(start).toISOString(),
+              $lte: new Date(end).toISOString()
+            }
+          }
+        },
+        // Project to include only the fields we need
+        {
+          $project: {
+            date: { $dateToString: { format: "%Y-%m-%d", date: { $toDate: "$TIME" } } },
+            // Convert sensor fields to an array of {k: sensorName, v: value} pairs
+            sensors: {
+              $objectToArray: {
+                sensor1: "$sensor1", sensor2: "$sensor2", sensor3: "$sensor3",
+                sensor4: "$sensor4", sensor5: "$sensor5", sensor6: "$sensor6",
+                sensor7: "$sensor7", sensor8: "$sensor8", sensor9: "$sensor9",
+                sensor10: "$sensor10", sensor11: "$sensor11", sensor12: "$sensor12",
+                sensor13: "$sensor13", sensor14: "$sensor14", sensor15: "$sensor15",
+                sensor16: "$sensor16", sensor17: "$sensor17", sensor18: "$sensor18",
+                sensor19: "$sensor19", sensor20: "$sensor20", sensor21: "$sensor21",
+                sensor22: "$sensor22", sensor23: "$sensor23", sensor24: "$sensor24",
+                sensor25: "$sensor25", sensor26: "$sensor26", sensor27: "$sensor27",
+                sensor28: "$sensor28", sensor29: "$sensor29", sensor30: "$sensor30",
+                sensor31: "$sensor31", sensor32: "$sensor32", sensor33: "$sensor33",
+                sensor34: "$sensor34", sensor35: "$sensor35", sensor36: "$sensor36",
+                sensor37: "$sensor37", sensor38: "$sensor38"
+              }
+            },
+            TIME: 1
+          }
+        },
+        // Unwind the sensors array
+        { $unwind: "$sensors" },
+        // Filter out null/undefined/empty values
+        {
+          $match: {
+            "sensors.v": { $exists: true, $ne: null, $ne: "" }
+          }
+        },
+        // Convert all values to a consistent number format
+        {
+          $addFields: {
+            numericValue: {
+              $let: {
+                vars: {
+                  // Handle Decimal128, string, and number types
+                  rawValue: {
+                    $cond: [
+                      { $eq: [{ $type: "$sensors.v" }, "object"] },
+                      { $toString: "$sensors.v" },
+                      { $toString: { $ifNull: ["$sensors.v", ""] } }
+                    ]
+                  }
+                },
+                in: {
+                  $cond: [
+                    { $regexMatch: { input: "$$rawValue", regex: /^[+-]?\d+(\.\d+)?$/ } },
+                    { $toDouble: { $trim: { input: "$$rawValue" } } },
+                    null
+                  ]
+                }
+              }
+            }
+          }
+        },
+        // Filter out any remaining invalid numeric values
+        {
+          $match: {
+            numericValue: { $type: ["number", "decimal"] }
+          }
+        }
+      ];
+
+      // Create separate pipelines for min and max to avoid $cond in $group
+      const groupStage = value.toLowerCase() === 'max' 
+        ? {
+            $group: {
+              _id: {
+                date: "$date",
+                sensorName: "$sensors.k"
+              },
+              date: { $first: "$date" },
+              sensorName: { $first: "$sensors.k" },
+              value: { $max: "$numericValue" },
+              count: { $sum: 1 }
+            }
+          }
+        : {
+            $group: {
+              _id: {
+                date: "$date",
+                sensorName: "$sensors.k"
+              },
+              date: { $first: "$date" },
+              sensorName: { $first: "$sensors.k" },
+              value: { $min: "$numericValue" },
+              count: { $sum: 1 }
+            }
+          };
+
+      // Combine all stages
+      const pipeline = [
+        ...baseStages,
+        groupStage,
+        // Group by date to collect all sensors
+        {
+          $group: {
+            _id: "$date",
+            date: { $first: "$date" },
+            sensors: {
+              $push: {
+                sensorName: "$sensorName",
+                value: { $round: ["$value", 2] }
+              }
+            },
+            count: { $sum: 1 }
+          }
+        },
+        // Format the output
+        {
+          $project: {
+            _id: 0,
+            date: 1,
+            sensors: 1
+          }
+        },
+        // Sort by date
+        { $sort: { date: 1 } }
+      ];
+
+      // Add debug logging
+      console.log('Pipeline:', JSON.stringify(pipeline, null, 2));
+      
+      // First, check if we have any matching documents
+      const count = await sensormodel.countDocuments({
+        waveguide: waveguide,
+        TIME: {
+          $gte: new Date(start).toISOString(),
+          $lte: new Date(end).toISOString()
+        }
+      });
+      
+      console.log(`Found ${count} matching documents for waveguide: ${waveguide}`);
+      
+      if (count === 0) {
+        // Try to find any data to debug the date format
+        const sampleDoc = await sensormodel.findOne({ waveguide: waveguide });
+        console.log('Sample document TIME format:', sampleDoc?.TIME);
+        console.log('Sample document waveguide:', sampleDoc?.waveguide);
+        console.log('Sample document:', JSON.stringify(sampleDoc, null, 2));
+      }
+
+      // Execute the aggregation pipeline with error handling
+      let dailyData = [];
+      try {
+        dailyData = await sensormodel.aggregate(pipeline);
+        console.log('Aggregation result:', JSON.stringify(dailyData, null, 2));
+      } catch (error) {
+        console.error('Aggregation error:', error);
+        throw error;
+      }
+
+      const result = {
+        side: side.charAt(0).toUpperCase() + side.slice(1),
+        startDate: start.toISOString().split('T')[0],
+        endDate: end.toISOString().split('T')[0],
+        valueType: value.toLowerCase(),
+        data: dailyData
+      };
+
+      res.status(200).json(result);
+    }
+    catch (error) {
+      console.error('Error in heatmapData:', error);
+      res.status(500).json({ 
+        error: 'An error occurred while generating the heatmap data',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+    
 }
 
 export const apiController = new ApiController();

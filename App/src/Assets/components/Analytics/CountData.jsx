@@ -25,7 +25,7 @@ const CountData = ({ selectedBusBar, setFetchedData }) => {
       const apidate = async () => {
         try {
           const response = await API.get(
-            `${process.env.REACT_APP_SERVER_URL}api/v2/getLimitChart?key=${busBarVariable}&limit=${limit}`
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportCountData?sensorrange=all-data&sides=${busBarVariable}&count=${limit}`
           );
           const data = response.data;
           setFetchedData(data);

@@ -32,7 +32,7 @@ const RangeDate = ({ selectedBusBar, setFetchedData }) => {
       const apidate = async () => {
         try {
           const response = await API.get(
-            `${process.env.REACT_APP_SERVER_URL}api/v2/getDateChart?key=${busBarVariable}&startDate=${startDate}&endDate=${endDate}`
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportDateData?sensorrange=all-data&sides=${busBarVariable}&startDate=${startDate}&endDate=${endDate}`
           );
           const data = response.data;
           setFetchedData(data);

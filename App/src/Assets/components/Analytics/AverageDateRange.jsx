@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import API from "../Axios/AxiosInterceptor";
+import API from '../Axios/AxiosInterceptor'
 import "./CSS/AnalyticsDateRange.css";
 
 const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
@@ -10,7 +10,7 @@ const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
 
   const handleRadioChange = (event) => {
     setAverage(event.target.value);
-    console.log("selected radio", event.target.value);
+    // console.log("selected radio", event.target.value);
   };
 
   const handleDateChange = (event) => {
@@ -34,7 +34,7 @@ const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
       const apidate = async () => {
         try {
           const response = await API.get(
-            `${process.env.REACT_APP_SERVER_URL}api/v2/getAverageChart?key=${busBarVariable}&startDate=${startDate}&endDate=${endDate}&average=${average}`
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportAverageData?sensorrange=all-data&sides=${selectedBusBar}&startDate=${startDate}&endDate=${endDate}&averageBy=${average}`
           );
           const data = response.data;
           setFetchedData(data);
@@ -96,7 +96,7 @@ const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
       </div>
 
       <div className="flex flex-col md:flex-row items-center justify-center md:space-x-14 md:h[20%] mt-6">
-        <div className="flex items-center mb-4">
+        {/* <div className="flex items-center mb-4">
           <input
             id="radio-1"
             type="radio"
@@ -112,7 +112,7 @@ const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
           >
             Minute
           </label>
-        </div>
+        </div> */}
 
         <div className="flex items-center mb-4">
           <input
