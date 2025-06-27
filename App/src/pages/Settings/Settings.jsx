@@ -8,6 +8,79 @@ import User from "../../Assets/components/sidebar-admins/components/User";
 import Alertslogs from "../../Assets/components/sidebar-admins/components/Alertslogs";
 import API from "../../Assets/components/Axios/AxiosInterceptor";
 import Navbar from "../../Assets/Navbar/Navbar";
+
+// InfoCard component for displaying user information in cards
+const InfoCard = ({ icon, label, value }) => (
+  <div className="bg-gray-400/50 p-4 rounded-lg border border-gray-200">
+    <div className="flex items-center space-x-3">
+      <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+        {icon}
+      </div>
+      <div className="text-left">
+        <p className="text-xs font-medium text-white">{label}</p>
+        <p className="text-sm font-semibold text-white">{value}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// InfoField component for displaying form-like information fields
+const InfoField = ({ label, value, icon }) => {
+  const getIcon = () => {
+    switch (icon) {
+      case 'user':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        );
+      case 'mail':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        );
+      case 'phone':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+        );
+      case 'id':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+          </svg>
+        );
+      case 'shield':
+        return (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-white">{label}</label>
+      <div className="mt-1 relative rounded-md shadow-sm">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          {getIcon()}
+        </div>
+        <input
+          type="text"
+          readOnly
+          value={value}
+          className="focus:ring-blue-500 border focus:border-blue-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-xl py-2 bg-gray-400/50 text-white"
+        />
+      </div>
+    </div>
+  );
+};
+
 const Settings = () => {
   const location = useLocation();
   const [userData, setUserData] = useState(() => {
@@ -23,35 +96,46 @@ const Settings = () => {
 
   const fetchUserData = useCallback(() => {
     const email = localStorage.getItem("email");
-    if (email) {
-      setIsLoading(true);
-      API.post(`${process.env.REACT_APP_SERVER_URL}api/admin/getUserDetails`, { email })
-        .then(response => {
-          const userData = response.data.data;
-          if (userData) {
-            setUserData(userData);
-            // Store each user data field in localStorage with 'settings' prefix
-            Object.entries(userData).forEach(([key, value]) => {
-              if (value !== null && value !== undefined) {
-                localStorage.setItem(`settings${key.charAt(0).toUpperCase() + key.slice(1)}`, value);
-              }
-            });
-          }
-        })
-        .catch(error => {
-          console.error("Error fetching user data:", error);
-          // If we have cached data, don't show an error to the user
-          if (!userData) {
-            // Handle error state if needed
-          }
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
+    if (!email) {
       setIsLoading(false);
+      return;
     }
-  }, [userData]);
+    
+    // Check if we have a recent cache (less than 5 minutes old)
+    const cacheKey = 'userDataCache';
+    const cachedData = localStorage.getItem(cacheKey);
+    const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
+    const now = new Date().getTime();
+    
+    if (cachedData && cacheTimestamp && (now - parseInt(cacheTimestamp, 10)) < 5 * 60 * 1000) {
+      setUserData(JSON.parse(cachedData));
+      setIsLoading(false);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    API.post(`${process.env.REACT_APP_SERVER_URL}api/admin/getUserDetails`, { email })
+      .then(response => {
+        const userData = response.data.data;
+        if (userData) {
+          setUserData(userData);
+          // Cache the data with timestamp
+          localStorage.setItem(cacheKey, JSON.stringify(userData));
+          localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
+        }
+      })
+      .catch(error => {
+        console.error("Error fetching user data:", error);
+        // Use cached data if available
+        if (cachedData) {
+          setUserData(JSON.parse(cachedData));
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []); // Removed userData from dependencies to prevent infinite loops
 
   useEffect(() => {
     fetchUserData();
@@ -106,182 +190,114 @@ const Settings = () => {
   const isAdminUser = userData && (userData.role === 'admin' || userData.role === 'superadmin');
 
   return (
-    <div>
+    <div className="min-h-screen ">
       {!isAdminUser && <Navbar onLogout={() => {}} />}
       
-      <div className="flex flex-row w-full h-full">
-        <div className=" h-full ">
-          {isAdminUser ? <Adminsidebar /> : ""}
-        </div>
-
-        <div className="w-full h-full text-white">
-          
+      <div className="flex">
+        {isAdminUser && <Adminsidebar />}
         
-          <div className="flex h-[100%] flex-1 flex-col content-between gap-16 px-4 py-4">
-          
-            <div className="flex h-[45%] w-full rounded-2xl border-2 border-white bg-[rgba(16,16,16,0.75)] backdrop-blur-sm">
-              <div className="w-full">
-                <div className="flex h-[20%] items-center justify-start pl-5 font-['Poppins'] text-lg font-bold">
-                  Welcome {userData ? userData.name : "Error"}
-                </div>
-                <div className="flex h-[60%] items-center justify-center">
-                  <div className="font-['Poppins'] flex h-28 w-28 items-center justify-center rounded-full border-[5px] border-white text-3xl font-bold">
-                    {userData?.name?.charAt(0).toUpperCase() || "E"}
+        <main className="flex-1 p-6">
+          {/* Welcome Card */}
+          <div className="bg-[#101010]/90 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg overflow-hidden mb-8">
+            <div className="p-6">
+              <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                {/* Profile Picture */}
+                <div className="flex-shrink-0">
+                  <div className="h-32 w-32 rounded-full bg-gradient-to-r from-blue-600 to-indigo-700 flex items-center justify-center text-4xl font-bold text-white shadow-lg">
+                    {userData?.name?.charAt(0).toUpperCase() || 'U'}
                   </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-center w-full">
-                <table className="h-[40%] w-full table-auto py-14">
-                  <tbody>
-                    <tr>
-                      <th className="flex items-center justify-center h-full pr-4">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="size-6"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                          />
-                        </svg>
-                      </th>
-                      <td className="text-center">
-                        {userData ? userData.name : "Error"}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th className="flex items-center justify-center h-full pr-4">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="size-6"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 0 0 .75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 0 0-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0 1 12 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 0 1-.673-.38m0 0A2.18 2.18 0 0 1 3 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 0 1 3.413-.387m7.5 0V5.25A2.25 2.25 0 0 0 13.5 3h-3a2.25 2.25 0 0 0-2.25 2.25v.894m7.5 0a48.667 48.667 0 0 0-7.5 0M12 12.75h.008v.008H12v-.008Z"
-                          />
-                        </svg>
-                      </th>
-                      <td className="text-center">{userData ? userData.role : "Error"}</td>
-                    </tr>
-                    <tr>
-                      <th className="flex items-center justify-center h-full pr-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z" />
-                        </svg>
-                      </th>
-                      <td className="text-center">{userData ? userData.empid : "Error"}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div>
-                {/* <button className="m-14 rounded-lg bg-[#101010]/70 outline outline-1 outline-offset-[-0.50px] outline-white">
-                  <div className="flex items-center justify-center w-24 h-12 gap-3 text-center">
-                    Edit
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 28 28"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="size-4"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-                      />
-                    </svg>
-                  </div>
-                </button> */}
-              </div>
-            </div>
-            <div className="flex h-[50%] rounded-2xl border-2 border-white bg-[rgba(16,16,16,0.75)] backdrop-blur-sm">
-              <div className="w-full">
-                <div className="flex h-[20%] items-center justify-start pl-5 font-['Poppins'] text-lg font-bold">
-                  Personal Information
-                </div>
-                <div className="flex h-[50%] w-full justify-center">
-                  <table className="table-auto w-[60%]">
-                    <tbody>
-                      <tr>
-                        <th className="pr-4 text-base font-semibold text-center text-zinc-400 ">First Name
-                        <td className="flex items-center justify-center text-base font-normal text-white">
-                          {userData ? userData.name : "Error"}
-                        </td>
-                        </th>
-                        <th className="pr-4 text-base font-semibold text-center text-zinc-400 ">Email Address
-                        <td className="flex items-center justify-center text-base font-normal text-white">
-                          {userData ? userData.email : "Error"}
-                        </td>
-                        </th>
-                      </tr>
-                      <tr>
-                      <th className="pr-4 text-base font-semibold text-center text-zinc-400 ">Phone Number
-                        <td className="flex items-center justify-center text-base font-normal text-white">
-                          {userData ? userData.phoneno : "Error"}
-                        </td>
-                        </th>
-                        <th className="pr-4 text-base font-semibold text-center text-zinc-400 ">Employee Id
-                        <td className="flex items-center justify-center text-base font-normal text-white">
-                          {userData ? userData.empid : "Error"}
-                        </td>
-                        </th>
-                      </tr>
-                      
-                      <tr>
-                      <th className="pr-4 text-base font-semibold text-center text-zinc-400 ">User Role
-                        <td className="flex items-center justify-center text-base font-normal text-white">
-                          {userData ? userData.role : "Error"}
-                        </td>
-                        </th>
-                      </tr>
-                    </tbody>
-                  </table>
                 </div>
                 
-              </div>
-              <div className="flex items-center justify-center w-[20%]">
-               
-              </div>
-              <div>
-                {/* <button className="m-14 rounded-lg bg-[#101010]/70 outline outline-1 outline-offset-[-0.50px] outline-white">
-                  <div className="flex items-center justify-center w-24 h-12 gap-3 text-center">
-                    Edit
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 28 28"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="size-4"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125"
-                      />
-                    </svg>
+                {/* User Info */}
+                <div className="flex-1 text-center md:text-left">
+                  <h1 className="text-2xl font-bold text-white mb-2">
+                    Welcome, {userData?.name || 'User'}
+                  </h1>
+                  <p className="text-gray-400 mb-6">Manage your account settings and preferences</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <InfoCard 
+                      icon={
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      }
+                      label="Name"
+                      value={userData?.name || 'N/A'}
+                    />
+                    <InfoCard 
+                      icon={
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                      }
+                      label="Role"
+                      value={userData?.role || 'N/A'}
+                    />
+                    <InfoCard 
+                      icon={
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                        </svg>
+                      }
+                      label="Employee ID"
+                      value={userData?.empid || 'N/A'}
+                    />
                   </div>
-                </button> */}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          {/* Personal Information Card */}
+          <div className="bg-[#101010]/90 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-white mb-6">Personal Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <InfoField 
+                  label="Full Name"
+                  value={userData?.name || 'N/A'}
+                  icon="user"
+                />
+                <InfoField 
+                  label="Email Address"
+                  value={userData?.email || 'N/A'}
+                  icon="mail"
+                />
+                <InfoField 
+                  label="Phone Number"
+                  value={userData?.phoneno || 'N/A'}
+                  icon="phone"
+                />
+                <InfoField 
+                  label="Employee ID"
+                  value={userData?.empid || 'N/A'}
+                  icon="id"
+                />
+                <div className="md:col-span-2">
+                  <InfoField 
+                    label="User Role"
+                    value={userData?.role || 'N/A'}
+                    icon="shield"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-8 flex justify-end">
+                <button className="px-6 py-2.5 bg-blue-700 text-white font-medium text-sm leading-tight rounded-md shadow-md hover:bg-blue-600 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out flex items-center border border-blue-500/30">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Profile
+                </button>
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
+
   );
 };
 

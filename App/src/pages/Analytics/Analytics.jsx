@@ -84,39 +84,120 @@ const Analytics = () => {
         </div>
 
         <div className="scrollbar-custom mt-4 h-auto w-full bg-[rgba(16,16,16,0.7)] overflow-x-auto overflow-y-auto rounded-xl border border-white p-2 text-white backdrop-blur md:flex lg:w-full md:col-span-2 md:flex-row md:p-4 xl:w-[40%]">
-          <div className="w-full  h-full">
+          <div className="w-full h-full">
             {fetchedData && fetchedData.length > 0 ? (
-              <div className="overflow-auto max-h-[250px] rounded-lg border border-gray-600">
-                <table className="min-w-full divide-y divide-gray-600">
-                  <thead className="bg-gray-800 sticky top-0">
+              <div className="overflow-auto max-h-[300px] rounded-lg border border-gray-700 shadow-lg">
+                <table className="min-w-full divide-y divide-gray-700">
+                  <thead className="bg-gray-800 sticky top-0 z-10">
                     <tr>
-                      {Object.keys(fetchedData[0]).map((key) => (
-                        <th
-                          key={key}
-                          scope="col"
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
-                        >
-                          {key}
-                        </th>
-                      ))}
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-800 z-10">
+                        Timestamp
+                      </th>
+                      {Object.keys(fetchedData[0])
+                        .filter(key => key.startsWith('sensor') || key === 'waveguide')
+                        .sort((a, b) => {
+                          // Sort sensors numerically
+                          if (a.startsWith('sensor') && b.startsWith('sensor')) {
+                            return parseInt(a.replace('sensor', '')) - parseInt(b.replace('sensor', ''));
+                          }
+                          return a.localeCompare(b);
+                        })
+                        .map((key) => (
+                          <th
+                            key={key}
+                            scope="col"
+                            className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap"
+                          >
+                            {key === 'waveguide' ? 'Waveguide' : key.replace('sensor', 'S')}
+                          </th>
+                        ))}
                     </tr>
                   </thead>
                   <tbody className="bg-gray-900 divide-y divide-gray-700">
-                    {fetchedData.map((row, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
-                        {Object.values(row).map((value, i) => (
-                          <td key={i} className="px-4 py-2 whitespace-nowrap text-sm text-gray-300">
-                            {typeof value === 'number' ? value.toFixed(2) : value}
+                    {fetchedData.map((row, index) => {
+                      const timestamp = row.timestamp || row.TIME || '';
+                      const date = timestamp ? new Date(timestamp) : null;
+                      
+                      return (
+                        <tr 
+                          key={index} 
+                          className={`${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'} hover:bg-gray-800/80 transition-colors`}
+                        >
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-200 sticky left-0 bg-gray-800 z-5">
+                            {date ? (
+                              <div className="flex flex-col">
+                                <span>{date.toLocaleDateString()}</span>
+                                <span className="text-xs text-gray-400">{date.toLocaleTimeString()}</span>
+                              </div>
+                            ) : 'N/A'}
                           </td>
-                        ))}
-                      </tr>
-                    ))}
+                          {Object.entries(row)
+                            .filter(([key]) => key.startsWith('sensor') || key === 'waveguide')
+                            .sort(([a], [b]) => {
+                              // Sort sensors numerically
+                              if (a.startsWith('sensor') && b.startsWith('sensor')) {
+                                return parseInt(a.replace('sensor', '')) - parseInt(b.replace('sensor', ''));
+                              }
+                              return a.localeCompare(b);
+                            })
+                            .map(([key, value], i) => {
+                              const isSensor = key.startsWith('sensor');
+                              const numericValue = typeof value === 'number' ? value : parseFloat(value);
+                              const isNumber = !isNaN(numericValue);
+                              
+                              // Determine color based on value
+                              let textColor = 'text-gray-300';
+                              if (isNumber) {
+                                if (numericValue < 60) textColor = 'text-blue-300';
+                                else if (numericValue < 70) textColor = 'text-green-400';
+                                else if (numericValue < 80) textColor = 'text-yellow-400';
+                                else if (numericValue < 90) textColor = 'text-orange-500';
+                                else textColor = 'text-red-500';
+                              }
+                              
+                              return (
+                                <td 
+                                  key={`${index}-${key}`} 
+                                  className={`px-4 py-2 text-center text-sm ${textColor} whitespace-nowrap`}
+                                  title={isNumber ? `${key}: ${numericValue.toFixed(2)}°C` : `${key}: ${value}`}
+                                >
+                                  {isNumber ? (
+                                    <span className={`px-2 py-1 rounded ${isSensor ? 'bg-gray-800/50' : ''}`}>
+                                      {numericValue.toFixed(2)}°C
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400">{value}</span>
+                                  )}
+                                </td>
+                              );
+                            })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="flex items-center justify-center text-gray-400 h-full">
-                No data available. Select filters and click "Fetch Data" to view results.
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                <svg 
+                  className="w-12 h-12 mb-2 text-gray-600" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={1.5} 
+                    d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                  />
+                </svg>
+                <p className="text-center">
+                  No data available.
+                  <br />
+                  <span className="text-sm">Select filters and click "Fetch Data" to view results.</span>
+                </p>
               </div>
             )}
           </div>

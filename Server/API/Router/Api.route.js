@@ -4,7 +4,10 @@ import { apiController } from '../Controller/Api.Controller.js';
 
 const router = express.Router();
 
+router.get('/getDashboardAPi', apiController.getDashboardAPi);
 router.get('/getallsensor',  apiController.getallsensor);
+router.get('/getAvgTable',  apiController.getAvgTable);
+router.get('/getDashboardchart', apiController.getDashboardchart);
 router.get('/getallsensorNoLimit',  apiController.getallsensorNoLimit);
 router.get('/getAverageTempbyHour',  apiController.AverageTempbyHour);
 router.get('/getReportAverageData',  apiController.reportAverageData);

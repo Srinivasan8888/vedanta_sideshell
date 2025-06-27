@@ -46,16 +46,658 @@ const filterNullValues = (obj) => {
 };
 
 class ApiController {
+
+  _calculateTimeRange(interval) {
+    const endTime = new Date();
+  let startTime = new Date();
+  
+  switch (interval) {
+    case '1h':
+      startTime.setHours(endTime.getHours() - 1);
+      break;
+    case '2h':
+      startTime.setHours(endTime.getHours() - 2);
+      break;
+    case '5h':
+      startTime.setHours(endTime.getHours() - 5);
+      break;
+    case '7h':
+      startTime.setHours(endTime.getHours() - 7);
+      break;
+    case '12h':
+      startTime.setHours(endTime.getHours() - 12);
+      break;
+    case 'Live':
+      // For live data, use last 1 hour as default
+      startTime.setHours(endTime.getHours() - 1);
+      break;
+    default:
+      startTime.setHours(endTime.getHours() - 1);
+  }
+  
+  return { startTime, endTime };
+  }
+
+  // Fetch historical data for a specific time range, user ID, and waveguide
+  async _fetchHistoricalData(userId, waveguide, startTime, endTime) {
+    try {
+      // Ensure we have valid Date objects
+      if (!(startTime instanceof Date) || isNaN(startTime.getTime()) || 
+          !(endTime instanceof Date) || isNaN(endTime.getTime())) {
+        throw new Error('Invalid date range provided');
+      }
+
+      console.log(`[DEBUG] Fetching data for user ${userId}, waveguide ${waveguide} from ${startTime.toISOString()} to ${endTime.toISOString()}`);
+      
+      // Format times to match the database format (YYYY-MM-DD HH:mm:ss)
+      const formatTimeForDB = (date) => {
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+          throw new Error('Invalid date provided to formatTimeForDB');
+        }
+        return date.toISOString().replace('T', ' ').substring(0, 19);
+      };
+
+      // Build the query for the requested time range
+      const query = {
+        id: userId,
+        waveguide: waveguide,
+        TIME: {
+          $gte: formatTimeForDB(startTime),
+          $lte: formatTimeForDB(endTime)
+        }
+      };
+
+      console.log('[DEBUG] Query:', JSON.stringify(query, null, 2));
+
+      // Execute the query for the requested time range
+      let records = await sensormodel.find(query).sort({ TIME: 1 }).lean();
+      
+      console.log(`[DEBUG] Records found in requested time range: ${records.length}`);
+      
+      // If no records found in the requested time range, get the most recent data
+      if (records.length === 0) {
+        console.log('[DEBUG] No records found in requested time range, fetching most recent data...');
+        
+        // Query for the most recent data regardless of time range
+        const recentQuery = {
+          id: userId,
+          waveguide: waveguide
+        };
+        
+        records = await sensormodel.find(recentQuery)
+          .sort({ TIME: -1 }) // Sort by time descending to get most recent first
+          .limit(100) // Limit to most recent 100 records
+          .lean();
+          
+        console.log(`[DEBUG] Fetched ${records.length} most recent records`);
+      }
+      
+      if (records.length > 0) {
+        console.log('[DEBUG] Sample record:', JSON.stringify(records[0], null, 2));
+      } else {
+        console.log('[DEBUG] No records found in the database');
+        return {
+          timestamps: [],
+          temperatures: [],
+          warning: 'No temperature data available',
+          dataAvailable: false
+        };
+      }
+
+      // Process the records to calculate average temperature per timestamp
+      const result = {
+        timestamps: [],
+        temperatures: [],
+        dataAvailable: true,
+        recordCount: records.length,
+        timeRange: {
+          start: records.length > 0 ? records[0].TIME : null,
+          end: records.length > 0 ? records[records.length - 1].TIME : null
+        }
+      };
+
+      // If we have records, process them
+      if (records.length > 0) {
+        // Sort by time ascending for consistent results
+        records.sort((a, b) => (a.TIME > b.TIME ? 1 : -1));
+        
+        records.forEach(record => {
+          try {
+            let sum = 0;
+            let count = 0;
+            
+            // Sum up all sensor values
+            for (let i = 1; i <= 38; i++) {
+              const sensorValue = parseFloat(record[`sensor${i}`]);
+              if (!isNaN(sensorValue)) {
+                sum += sensorValue;
+                count++;
+              }
+            }
+            
+            // Calculate average if we have valid sensor values
+            if (count > 0) {
+              result.timestamps.push(record.TIME);
+              result.temperatures.push(parseFloat((sum / count).toFixed(2)));
+            }
+          } catch (error) {
+            console.error(`[ERROR] Error processing record:`, error);
+            // Continue with next record even if one fails
+          }
+        });
+      }
+
+      console.log(`[DEBUG] Processed ${result.timestamps.length} data points`);
+      return result;
+    } catch (error) {
+      console.error('[ERROR] Error in _fetchHistoricalData:', error);
+      throw error;
+    }
+  }
+
   constructor() {
     // Bind methods to maintain 'this' context
-    this.getallsensor = this.getallsensor.bind(this);
-    this.AverageTempbyHour = this.AverageTempbyHour.bind(this);
+    this.getDashboardchart = this.getDashboardchart.bind(this);
+    this.getDashboardData = this.getDashboardData.bind(this);
+    this.getDashboardAPi = this.getDashboardAPi.bind(this);
   }
   // Helper function to calculate average of an array
   _calculateAverage(values) {
     if (!values || values.length === 0) return null;
     const sum = values.reduce((a, b) => a + b, 0);
     return parseFloat((sum / values.length).toFixed(2));
+  }
+
+  _getStatus(temp) {
+    if (temp <= 30) return 'Normal';
+    if (temp <= 35) return 'Moderate';
+    return 'High';
+  }
+
+  _formatHour(hour) {
+    // Convert 24-hour format to 12-hour format with AM/PM
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12; // Convert 0 to 12 for 12 AM
+    return `${displayHour} ${period}`;
+  }
+
+  async _getHourlyData(id, startDate, endDate) {
+    // Fetch documents for the given time range
+    const docs = await sensormodel.find({
+      id: id,
+      createdAt: { $gte: startDate, $lt: endDate },
+      waveguide: { $in: ['WG1', 'WG2'] }
+    }).sort({ createdAt: -1 }).lean();
+
+    // Initialize hourly buckets
+    const hourlyData = Array.from({ length: 24 }, () => ({
+      WG1: [],
+      WG2: []
+    }));
+
+    // Process documents into hourly buckets (most recent first)
+    for (const doc of docs) {
+      const hour = new Date(doc.createdAt).getHours();
+      const waveguide = doc.waveguide;
+      
+      // Only add if we don't have data for this hour and waveguide yet
+      if (hourlyData[hour][waveguide].length === 0) {
+        // Collect all sensor values
+        const values = [];
+        for (let i = 1; i <= 38; i++) {
+          const value = parseFloat(doc[`sensor${i}`]);
+          if (!isNaN(value)) values.push(value);
+        }
+        
+        if (values.length > 0) {
+          hourlyData[hour][waveguide] = values; // Store the first valid reading we find
+        }
+      }
+    }
+
+    return hourlyData;
+  }
+
+  // Fetch and process historical data with hourly bucketing
+  async _fetchHistoricalData(userId, waveguide, startTime, endTime) {
+    // Fetch documents for the specified time range
+    const docs = await sensormodel.find({
+      id: userId,
+      waveguide: waveguide,
+      createdAt: { $gte: startTime, $lt: endTime }
+    }).sort({ createdAt: 1 }).lean();
+
+    // Initialize data structures
+    const hourlyData = new Map();
+    const allSensorValues = [];
+    
+    // Process each document into hourly buckets
+    docs.forEach(doc => {
+      const timestamp = new Date(doc.createdAt);
+      const hour = timestamp.getHours();
+      const dateKey = timestamp.toISOString().split('T')[0];
+      const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
+      
+      if (!hourlyData.has(hourKey)) {
+        hourlyData.set(hourKey, {
+          timestamp: new Date(timestamp).setMinutes(0, 0, 0),
+          dataPoints: []  // Store all data points for this hour
+        });
+      }
+      
+      // Store the complete document for this hour
+      const hourData = hourlyData.get(hourKey);
+      
+      // Process all sensors for this document
+      const sensorReadings = {};
+      for (let i = 1; i <= 38; i++) {
+        const sensorKey = `sensor${i}`;
+        const value = parseFloat(doc[sensorKey]);
+        if (!isNaN(value)) {
+          sensorReadings[sensorKey] = value;
+          allSensorValues.push({
+            sensor: sensorKey,
+            value: value,
+            side: waveguide === 'WG1' ? 'ASide' : 'BSide',
+            timestamp: doc.createdAt
+          });
+        }
+      }
+      
+      // Only add if we have valid sensor readings
+      if (Object.keys(sensorReadings).length > 0) {
+        hourData.dataPoints.push({
+          timestamp: doc.createdAt,
+          sensors: sensorReadings
+        });
+      }
+    });
+
+    // Process hourly data into response format
+    const sensorData = [];
+    
+    // Convert map to array and sort by timestamp
+    const sortedHours = Array.from(hourlyData.entries())
+      .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
+
+    // Process each hour
+    for (const [_, hourData] of sortedHours) {
+      const timestamp = new Date(hourData.timestamp);
+      const hour = timestamp.getHours();
+      
+      // Format timestamp for display
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      const timeString = `${hour12}:00 ${period}`;
+      
+      // Prepare sensor data for this hour
+      const hourSensorData = {
+        timestamp: timeString,
+        dataPoints: hourData.dataPoints,  // Include all data points
+        stats: {
+          avgTemp: 0,
+          minTemp: Infinity,
+          maxTemp: -Infinity,
+          totalReadings: hourData.dataPoints.length
+        }
+      };
+      
+      // Calculate statistics across all data points
+      const allTemps = [];
+      
+      hourData.dataPoints.forEach(dataPoint => {
+        const temps = Object.values(dataPoint.sensors);
+        allTemps.push(...temps);
+        
+        // Update min/max
+        const pointMin = Math.min(...temps);
+        const pointMax = Math.max(...temps);
+        hourSensorData.stats.minTemp = Math.min(hourSensorData.stats.minTemp, pointMin);
+        hourSensorData.stats.maxTemp = Math.max(hourSensorData.stats.maxTemp, pointMax);
+      });
+      
+      // Calculate average temperature for this hour
+      if (allTemps.length > 0) {
+        hourSensorData.stats.avgTemp = parseFloat(
+          (allTemps.reduce((sum, val) => sum + val, 0) / allTemps.length).toFixed(2)
+        );
+      } else {
+        hourSensorData.stats.minTemp = 0;
+        hourSensorData.stats.maxTemp = 0;
+      }
+        
+      sensorData.push(hourSensorData);
+    }
+    
+    // Calculate statistics
+    const sideValues = allSensorValues.reduce((acc, { sensor, value, side }) => {
+      if (!acc[side]) {
+        acc[side] = [];
+      }
+      acc[side].push(value);
+      return acc;
+    }, {});
+    
+    const stats = {};
+    
+    // Calculate stats for each side
+    for (const [side, values] of Object.entries(sideValues)) {
+      if (values.length > 0) {
+        stats[side] = {
+          maxTemp: Math.max(...values).toFixed(1),
+          minTemp: Math.min(...values).toFixed(1),
+          avgTemp: (values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1)
+        };
+      }
+    }
+
+    return { 
+      sensorData,
+      stats
+    };
+  }
+v
+  // Helper function to calculate average temperature from sensor data
+  _calculateAverageTemperature(doc) {
+    let sum = 0;
+    let count = 0;
+    
+    for (let i = 1; i <= 38; i++) {
+      const sensorValue = parseFloat(doc[`sensor${i}`]);
+      if (!isNaN(sensorValue)) {
+        sum += sensorValue;
+        count++;
+      }
+    }
+    
+    return count > 0 ? sum / count : 0;
+  }
+
+  async getDashboardAPi(req, res) {
+    console.log('[DEBUG] getDashboardAPi called with query:', req.query);
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({ 
+          success: false,
+          message: 'User ID is required in headers' 
+        });
+      }
+
+      // Get interval from query params (default to '1h' if not provided)
+      const { interval = '1h' } = req.query;
+      const validIntervals = ['Live', '1h', '2h', '5h', '7h', '12h'];
+      
+      if (!validIntervals.includes(interval)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid interval. Must be one of: ${validIntervals.join(', ')}`,
+        });
+      }
+
+      // 1. Get real-time sensor data (from getallsensor)
+      const latestWG1 = await sensormodel
+        .findOne({ id, waveguide: 'WG1' })
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      const latestWG2 = await sensormodel
+        .findOne({ id, waveguide: 'WG2' })
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      const realtimeData = [latestWG1, latestWG2]
+        .filter(Boolean)
+        .map(wg => filterNullValues(wg))
+        .filter(Boolean);
+
+      // 2. Get historical data (from getDashboardchart)
+      const timeRange = this._calculateTimeRange(interval);
+      const startTime = timeRange.startTime;
+      const endTime = timeRange.endTime;
+
+      // Get historical data for both waveguides
+      const [historicalWG1, historicalWG2] = await Promise.all([
+        this._fetchHistoricalData(id, 'WG1', startTime, endTime),
+        this._fetchHistoricalData(id, 'WG2', startTime, endTime)
+      ]);
+
+      // 3. Get hourly average data (from getAvgTable)
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+      const startOfPrevDay = new Date(now);
+      startOfPrevDay.setDate(startOfPrevDay.getDate() - 1);
+      startOfPrevDay.setHours(0, 0, 0, 0);
+      const endOfPrevDay = new Date(startOfPrevDay);
+      endOfPrevDay.setDate(endOfPrevDay.getDate() + 1);
+
+      const [currentDayData, prevDayData] = await Promise.all([
+        this._getHourlyData(id, startOfDay, endOfDay),
+        this._getHourlyData(id, startOfPrevDay, endOfPrevDay)
+      ]);
+
+      // Merge data - prefer current day, fall back to previous day
+      const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
+        WG1: currentDayData[hour].WG1.length > 0 ? currentDayData[hour].WG1 : prevDayData[hour].WG1,
+        WG2: currentDayData[hour].WG2.length > 0 ? currentDayData[hour].WG2 : prevDayData[hour].WG2
+      }));
+
+      // Calculate averages and format output for all 24 hours
+      const tableData = [];
+      
+      for (let hour = 0; hour < 24; hour++) {
+        const hourData = hourlyData[hour] || { WG1: [], WG2: [] };
+        const wg1Data = hourData.WG1 || [];
+        const wg2Data = hourData.WG2 || [];
+        
+        const timeString = this._formatHour(hour);
+        const entries = [];
+  
+        // Process WG1 (ASide) if data exists
+        if (wg1Data.length > 0) {
+          const avg = wg1Data.reduce((sum, val) => sum + val, 0) / wg1Data.length;
+          if (!isNaN(avg)) {
+            entries.push({
+              side: 'ASide',
+              temp: Math.round(avg * 10) / 10,
+              status: this._getStatus(avg)
+            });
+          }
+        }
+  
+        // Process WG2 (BSide) if data exists
+        if (wg2Data.length > 0) {
+          const avg = wg2Data.reduce((sum, val) => sum + val, 0) / wg2Data.length;
+          if (!isNaN(avg)) {
+            entries.push({
+              side: 'BSide',
+              temp: Math.round(avg * 10) / 10,
+              status: this._getStatus(avg)
+            });
+          }
+        }
+  
+        // Always add the hour to results, even if no entries
+        tableData.push({
+          index: hour + 1, // 1-based index
+          time: timeString,
+          entries
+        });
+      }
+
+      // Prepare the unified response
+      const response = {
+        success: true,
+        data: {
+          metadata: {
+            interval,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            timestamp: new Date().toISOString()
+          },
+          realtime: realtimeData,
+          historical: {
+            ASide: historicalWG1,
+            BSide: historicalWG2
+          },
+          hourlyAverages: tableData
+        },
+        message: 'Dashboard data fetched successfully'
+      };
+  
+      res.status(200).json(response);
+    } catch (error) {
+      console.error('[ERROR] Error in getDashboardAPi:', error);
+      res.status(500).json({ 
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: error.stack
+      });
+    }
+  }
+  
+  async getAvgTable(req, res) {
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({ error: 'User ID is required in headers' });
+      }
+  
+      // Get current day boundaries in server's local time
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      
+      // Get previous day boundaries
+      const startOfPrevDay = new Date(now);
+      startOfPrevDay.setDate(startOfPrevDay.getDate() - 1);
+      startOfPrevDay.setHours(0, 0, 0, 0);
+      const endOfPrevDay = new Date(startOfPrevDay);
+      endOfPrevDay.setDate(endOfPrevDay.getDate() + 1);
+  
+      // Get data for both days in parallel
+      const [currentDayData, prevDayData] = await Promise.all([
+        this._getHourlyData(id, startOfDay, endOfDay),
+        this._getHourlyData(id, startOfPrevDay, endOfPrevDay)
+      ]);
+
+      // Merge data - prefer current day, fall back to previous day
+      const hourlyData = Array.from({ length: 24 }, (_, hour) => ({
+        WG1: currentDayData[hour].WG1.length > 0 ? currentDayData[hour].WG1 : prevDayData[hour].WG1,
+        WG2: currentDayData[hour].WG2.length > 0 ? currentDayData[hour].WG2 : prevDayData[hour].WG2
+      }));
+  
+      // Calculate averages and format output for all 24 hours
+      const tableData = [];
+      
+      for (let hour = 0; hour < 24; hour++) {
+        const hourData = hourlyData[hour] || { WG1: [], WG2: [] };
+        const wg1Data = hourData.WG1 || [];
+        const wg2Data = hourData.WG2 || [];
+        
+        const timeString = this._formatHour(hour);
+        const entries = [];
+  
+        // Process WG1 (ASide) if data exists
+        if (wg1Data.length > 0) {
+          const avg = wg1Data.reduce((sum, val) => sum + val, 0) / wg1Data.length;
+          if (!isNaN(avg)) {
+            entries.push({
+              side: 'ASide',
+              temp: Math.round(avg * 10) / 10,
+              status: this._getStatus(avg)
+            });
+          }
+        }
+  
+        // Process WG2 (BSide) if data exists
+        if (wg2Data.length > 0) {
+          const avg = wg2Data.reduce((sum, val) => sum + val, 0) / wg2Data.length;
+          if (!isNaN(avg)) {
+            entries.push({
+              side: 'BSide',
+              temp: Math.round(avg * 10) / 10,
+              status: this._getStatus(avg)
+            });
+          }
+        }
+  
+        // Always add the hour to results, even if no entries
+        tableData.push({
+          index: hour + 1, // 1-based index
+          time: timeString,
+          entries
+        });
+      }
+  
+      res.status(200).json(tableData);
+    } catch (error) {
+      console.error('Error in getAvgTable:', error);
+      res.status(500).json({ 
+        error: 'An error occurred while generating temperature summary',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+  
+  async getDashboardchart(req, res) {
+    console.log('[DEBUG] getDashboardchart called with query:', req.query);
+    try {
+      const { side, interval = '1h' } = req.query;
+      const validIntervals = ['Live', '1h', '2h', '5h', '7h', '12h'];
+      const validSides = ['Aside', 'Bside'];
+  
+      // Validate input parameters
+      if (!side || !validSides.includes(side)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid or missing side parameter. Must be "Aside" or "Bside"`,
+        });
+      }
+  
+      if (!validIntervals.includes(interval)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid interval. Must be one of: ${validIntervals.join(', ')}`,
+        });
+      }
+  
+      const userId = 'XY001'; // Default user ID
+      const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
+      
+      // Calculate time range based on interval
+      const timeRange = this._calculateTimeRange(interval);
+      const startTime = timeRange.startTime;
+      const endTime = timeRange.endTime;
+  
+      // Fetch historical data for the specified time range
+      const historicalData = await this._fetchHistoricalData(userId, waveguide, startTime, endTime);
+      
+      // Prepare response
+      const response = {
+        success: true,
+        data: {
+          side,
+          interval,
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
+          ...historicalData
+        },
+        message: `Historical data for ${interval} interval fetched successfully`,
+      };
+  
+      return res.status(200).json(response);
+    } catch (error) {
+      console.error('[ERROR] Error in getDashboardchart:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error.message,
+      });
+    }
   }
 
   async getallsensor(req, res) {
@@ -105,33 +747,36 @@ class ApiController {
     }
   }
 
-  async getallsensorNoLimit(req, res) {
-    try {
-      console.log('Fetching all sensor data...');
-      
-      // Fetch all documents from the database
-      const allDocuments = await sensormodel
-        .find({})  // Empty query object to match all documents
-        .lean();
-      
-      console.log(`Fetched ${allDocuments.length} documents`);
-      
-      // Return all documents
-      res.status(200).json({
-        success: true,
-        count: allDocuments.length,
-        data: allDocuments
-      });
-    } catch (error) {
-      console.error('Error in getallsensor:', error);
-      res.status(500).json({ 
-        error: 'An error occurred while fetching sensor data',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
-      });
+  _calculateTimeRange(interval) {
+    const now = new Date();
+    let startTime = new Date(now);
+    
+    switch (interval) {
+      case '1h':
+        startTime.setHours(now.getHours() - 1);
+        break;
+      case '2h':
+        startTime.setHours(now.getHours() - 2);
+        break;
+      case '5h':
+        startTime.setHours(now.getHours() - 5);
+        break;
+      case '7h':
+        startTime.setHours(now.getHours() - 7);
+        break;
+      case '12h':
+        startTime.setHours(now.getHours() - 12);
+        break;
+      case 'Live':
+      default:
+        // For live data, get data from the last 5 minutes
+        startTime.setMinutes(now.getMinutes() - 5);
+        break;
     }
+    
+    return { startTime, endTime: now };
   }
-
-  // Helper function to convert date to database time string format
+  
   _formatTimeForDB(date) {
     const pad = num => num.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
@@ -475,8 +1120,7 @@ class ApiController {
                 const sensorNum = startSensor + i;
                 return createSensorConversion(sensorNum);
               })
-            ),
-            count: { $sum: 1 }
+            )
           }
         },
         {
@@ -517,8 +1161,7 @@ class ApiController {
                   }
                 ];
               })
-            ),
-            count: 1
+            )
           }
         },
         { $sort: { timestamp: 1 } }
@@ -888,7 +1531,7 @@ class ApiController {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
       if (!id) {
-        return res.status(400).json({ error: 'User ID is required in headers' });
+        return mres.status(400).json({ error: 'User ID is required in headers' });
       }
   
       // Get query parameters
@@ -896,7 +1539,7 @@ class ApiController {
   
       // Validate parameters
       if (!sensorrange || !sides || !count) {
-        return res.status(400).json({ 
+        return mres.status(400).json({ 
           error: 'Missing required parameters',
           required: ['sensorrange', 'sides', 'count']
         });
@@ -905,7 +1548,7 @@ class ApiController {
       // Parse and validate count
       let recordLimit = parseInt(count, 10);
       if (isNaN(recordLimit) || recordLimit <= 0) {
-        return res.status(400).json({ 
+        return mres.status(400).json({ 
           error: 'Invalid count parameter. Must be a positive integer.',
           validExamples: [100, 500, 1000]
         });
@@ -914,7 +1557,7 @@ class ApiController {
       // Set a maximum limit to prevent excessive load
       const MAX_LIMIT = 5000;
       if (recordLimit > MAX_LIMIT) {
-        return res.status(400).json({ 
+        return mres.status(400).json({ 
           error: `Count exceeds maximum allowed value of ${MAX_LIMIT}`,
           maxAllowed: MAX_LIMIT
         });
@@ -997,7 +1640,7 @@ class ApiController {
         throw new Error(`Failed to fetch data: ${error.message}`);
       }
   
-      res.json({
+      mres.json({
         success: true,
         data: results,
         metadata: {
@@ -1284,7 +1927,109 @@ class ApiController {
       });
     }
   }
-    
+
+  //testing api for sensor data
+  async getallsensorNoLimit(req, res) {
+    try {
+      console.log('Fetching all sensor data...');
+      
+      // Fetch all documents from the database
+      const allDocuments = await sensormodel
+        .find({})  // Empty query object to match all documents
+        .lean()
+        .sort({
+          updatedAt: -1
+        });
+      
+      console.log(`Fetched ${allDocuments.length} documents`);
+      
+      // Return all documents
+      res.status(200).json({
+        success: true,
+        count: allDocuments.length,
+        data: allDocuments
+      });
+    } catch (error) {
+      console.error('Error in getallsensor:', error);
+      res.status(500).json({ 
+        error: 'An error occurred while fetching sensor data',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  async getDashboardData(req, res) {
+    console.log('[DEBUG] getDashboardData called with query:', req.query);
+    try {
+      const { side = 'Aside', interval = '1h' } = req.query;
+      const validIntervals = ['Live', '1h', '2h', '5h', '7h', '12h'];
+      const validSides = ['Aside', 'Bside'];
+
+      // Validate input parameters
+      if (!validSides.includes(side)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid side parameter. Must be "Aside" or "Bside"`,
+        });
+      }
+
+      if (!validIntervals.includes(interval)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid interval. Must be one of: ${validIntervals.join(', ')}`,
+        });
+      }
+
+      const userId = 'XY001'; // Default user ID
+      const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
+      
+      // Calculate time range based on interval
+      const timeRange = this._calculateTimeRange(interval);
+      const startTime = timeRange.startTime;
+      const endTime = timeRange.endTime;
+
+      // Fetch all required data in parallel
+      const [
+        realtimeData,
+        historicalData,
+        avgTableData
+      ] = await Promise.all([
+        // Get realtime sensor data
+        this.getallsensor({ ...req, query: {} }, { json: (data) => data }),
+        // Get historical chart data
+        this._fetchHistoricalData(userId, waveguide, startTime, endTime),
+        // Get hourly average data
+        this.getAvgTable({ ...req, query: {} }, { json: (data) => data })
+      ]);
+
+      // Prepare consolidated response
+      const response = {
+        success: true,
+        data: {
+          metadata: {
+            side,
+            interval,
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            timestamp: new Date().toISOString()
+          },
+          realtime: realtimeData,
+          historical: historicalData,
+          averages: avgTableData
+        },
+        message: 'Dashboard data fetched successfully'
+      };
+
+      return res.status(200).json(response);
+    } catch (error) {
+      console.error('[ERROR] Error in getDashboardData:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      });
+    }
+  }
 }
 
 export const apiController = new ApiController();

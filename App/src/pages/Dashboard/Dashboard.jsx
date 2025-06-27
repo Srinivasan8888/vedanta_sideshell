@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useCallback, useRef } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useRef, useCallback } from 'react';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import '../../Assets/Navbar/Sidebar.css';
 import {
@@ -39,26 +39,6 @@ const Loader = () => (
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
   </div>
 );
-// Sample data generation function
-// const generateSensorData = () => {
-//   const sensors = [];
-//   for (let i = 1; i <= 76; i++) {
-//     const value = (Math.random() * 100).toFixed(2);
-//     const previousValue = (Math.random() * 100).toFixed(2);
-//     const difference = (value - previousValue).toFixed(2);
-//     const isPositive = difference >= 0;
-
-//     sensors.push({
-//       id: i,
-//       name: `Sensor ${i}`,
-//       value,
-//       difference: Math.abs(difference),
-//       isPositive,
-//       // unit: '°C'
-//     });
-//   }
-//   return sensors;
-// };
 
 const SensorCard = ({ sensor }) => (
   <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
@@ -107,7 +87,7 @@ const SensorRow = ({ sensors, waveguide, rowType }) => {
 };
 
 const Dashboard = () => {
-  const [timeInterval, setTimeInterval] = useState('1H');
+  const [timeInterval, setTimeInterval] = useState('Live');
 
   const handleTimeIntervalChange = (interval) => {
     setTimeInterval(interval);
@@ -438,33 +418,63 @@ const Dashboard = () => {
               <table className="min-w-full  divide-y divide-gray-200">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
-                    <th scope="col" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th rowSpan="2" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">#</th>
+                    <th rowSpan="2" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    <th colSpan="3" className="text-center text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temperature Data</th>
+                  </tr>
+                  <tr>
+                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Side</th>
+                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
+                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-gray-200">
                   {Array.from({ length: 24 }).map((_, index) => {
-                    const temp = (Math.random() * 20 + 20).toFixed(1);
                     const time = new Date();
                     time.setHours(index, 0, 0, 0);
                     const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+                    
+                    // Static temperature values
+                    const aSideTemp = '--';
+                    const bSideTemp = '--';
+
+                    // Status for placeholder
+                    const placeholderStatus = { class: 'bg-gray-100 text-gray-800', text: '--' };
 
                     return (
-                      <tr key={index} className="hover:bg-gray-50/50 transition-colors">
-                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{index + 1}</td>
-                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{timeString}</td>
-                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{temp}°C</td>
-                        <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${temp > 35 ? 'bg-red-100 text-red-800' :
-                            temp > 30 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                            {temp > 35 ? 'High' : temp > 30 ? 'Moderate' : 'Normal'}
-                          </span>
-                        </td>
-                      </tr>
+                      <React.Fragment key={index}>
+                        {/* A Side Row */}
+                        <tr className="hover:bg-gray-50/50 transition-colors">
+                          {index === 0 || index % 1 === 0 ? (
+                            <>
+                              <td rowSpan="2" className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                {index + 1}
+                              </td>
+                              <td rowSpan="2" className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
+                                {timeString}
+                              </td>
+                            </>
+                          ) : null}
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">ASide</td>
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">{aSideTemp}°C</td>
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${placeholderStatus.class}`}>
+                              {placeholderStatus.text}
+                            </span>
+                          </td>
+                        </tr>
+                        
+                        {/* B Side Row */}
+                        <tr className="hover:bg-gray-50/50 transition-colors border-b border-gray-200">
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">BSide</td>
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">{bSideTemp}°C</td>
+                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${placeholderStatus.class}`}>
+                              {placeholderStatus.text}
+                            </span>
+                          </td>
+                        </tr>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -484,6 +494,7 @@ const Dashboard = () => {
             </div>
 
             <div className="p-3 grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-2 gap-3 flex-grow">
+              {/* Max Temperature Card */}
               <div className="bg-gradient-to-br from-red-50 to-white p-3 rounded-lg border border-red-100 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-red-600">Max Temp</span>
@@ -493,10 +504,19 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">38.2°C</p>
-                <p className="text-xs text-gray-500 mt-auto">+2.4° from avg</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">38.2°C</p>
+                    <p className="text-xs text-gray-500">ASide</p>
+                  </div>
+                  <div className="text-center border-l border-gray-200 pl-4">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">39.2°C</p>
+                    <p className="text-xs text-gray-500">BSide</p>
+                  </div>
+                </div>
               </div>
 
+              {/* Min Temperature Card */}
               <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-blue-600">Min Temp</span>
@@ -506,10 +526,19 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">22.5°C</p>
-                <p className="text-xs text-gray-500 mt-auto">-1.8° from avg</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">22.5°C</p>
+                    <p className="text-xs text-gray-500">ASide</p>
+                  </div>
+                  <div className="text-center border-l border-gray-200 pl-4">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">21.3°C</p>
+                    <p className="text-xs text-gray-500">BSide</p>
+                  </div>
+                </div>
               </div>
 
+              {/* Average Temperature Card */}
               <div className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-lg border border-gray-100 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-medium text-gray-600">Avg Temp</span>
@@ -519,8 +548,16 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">29.8°C</p>
-                <p className="text-xs text-gray-500 mt-auto">Last 24h average</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">29.8°C</p>
+                    <p className="text-xs text-gray-500">ASide (24h avg)</p>
+                  </div>
+                  <div className="text-center border-l border-gray-200 pl-4">
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">30.2°C</p>
+                    <p className="text-xs text-gray-500">BSide (24h avg)</p>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-gradient-to-br from-amber-50 to-white p-3 rounded-lg border border-amber-100 h-full flex flex-col">
@@ -578,12 +615,32 @@ const Dashboard = () => {
           <div className="relative w-full  md:h-full">
             {/* Chart Header */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-              <div>
+              <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold text-gray-800">Temperature Trend</h3>
-                <p className="text-sm text-gray-500">Last 24 hours temperature data</p>
+                <div className="flex items-center space-x-4">
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="side"
+                      value="ASide"
+                      checked={true}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">A Side</span>
+                  </label>
+                  <label className="inline-flex items-center">
+                    <input
+                      type="radio"
+                      name="side"
+                      value="BSide"
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">B Side</span>
+                  </label>
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
-                {['1H', '2H', '5H', '7H', '12H', '24H'].map((interval) => (
+                {['Live', '1H', '2H', '5H', '7H', '12H'].map((interval) => (
                   <button
                     key={interval}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 border
@@ -610,7 +667,7 @@ const Dashboard = () => {
                   }),
                   datasets: [{
                     label: 'Temperature',
-                    data: Array.from({ length: 24 }, () => (Math.random() * 20 + 20).toFixed(1)),
+                    data: Array(24).fill(0),
                     borderColor: 'rgb(79, 70, 229)',
                     backgroundColor: 'rgba(79, 70, 229, 0.1)',
                     tension: 0.3,
@@ -749,9 +806,9 @@ const Dashboard = () => {
 
               {/* Current Value Indicator - Moved to top left to avoid legend overlap */}
               <div className="absolute top-2 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                <div className="flex items-center text-sm font-medium text-gray-700">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500 mr-2"></span>
-                  Current: {Array.from({ length: 24 }, () => (Math.random() * 20 + 20).toFixed(1)).pop()}°C
+                <div className="flex items-center text-sm font-medium text-gray-400">
+                  <span className="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
+                  Current: --°C
                 </div>
               </div>
             </div>
