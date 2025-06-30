@@ -1,5 +1,6 @@
 import React, { useState, useEffect, lazy, Suspense, useRef, useCallback } from 'react';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import '../../Assets/Navbar/Sidebar.css';
 import {
   Chart as ChartJS,
@@ -40,13 +41,30 @@ const Loader = () => (
   </div>
 );
 
-const SensorCard = React.memo(({ sensor }) => (
-  <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
-    <button className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded">
-      <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fillRule="evenodd" clipRule="evenodd" d="M2.005 0L10.005 8L2.005 16L0 14L6.005 8L0 2L2.005 0Z" fill="#3047C0" />
-      </svg>
-    </button>
+const SensorCard = React.memo(({ sensor }) => {
+  const navigate = useNavigate();
+  
+  const handleNavigate = () => {
+    // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
+    const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
+    const sensorId = sensorNumber ? `sensor${sensorNumber}` : 'sensor1';
+    const side = sensor.name.includes('A') ? 'Aside' : 'Bside';
+    
+    // Navigate to CollectorBar with sensorId and side as query parameters
+    navigate(`/CollectorBar?sensorId=${sensorNumber}&side=${side}`);
+  };
+  
+  return (
+    <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
+      <button 
+        onClick={handleNavigate}
+        className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded"
+        aria-label="View sensor details"
+      >
+        <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path fillRule="evenodd" clipRule="evenodd" d="M2.005 0L10.005 8L2.005 16L0 14L6.005 8L0 2L2.005 0Z" fill="#3047C0" />
+        </svg>
+      </button>
 
     <div className={`absolute bottom-3 right-1 bg-white rounded-full p-1 pl-2 pr-2 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
       {sensor.isPositive ? <FaArrowUp className="mr-0.5 mb-1 mt-0.5" /> : <FaArrowDown className="mr-0.5 mb-1 mt-0.5" />}
@@ -64,7 +82,8 @@ const SensorCard = React.memo(({ sensor }) => (
       </div>
     </div>
   </div>
-), (prevProps, nextProps) => {
+  );
+}, (prevProps, nextProps) => {
   // Only re-render if sensor data changes
   return prevProps.sensor.value === nextProps.sensor.value &&
          prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
@@ -93,9 +112,15 @@ const SensorRow = ({ sensors, waveguide, rowType }) => {
 };
 
 const Dashboard = () => {
+  const [showLegendPopup, setShowLegendPopup] = useState(false);
+  const [hiddenSensors, setHiddenSensors] = useState({}); // Track hidden sensors by ID
   const [timeInterval, setTimeInterval] = useState('Live');
   const [selectedSide, setSelectedSide] = useState('ASide');
   const [historicalData, setHistoricalData] = useState({ ASide: { sensorData: [] }, BSide: { sensorData: [] } });
+  const [temperatureStats, setTemperatureStats] = useState({
+    ASide: { maxTemp: '0.0°C', minTemp: '0.0°C', avgTemp: '0.0°C' },
+    BSide: { maxTemp: '0.0°C', minTemp: '0.0°C', avgTemp: '0.0°C' }
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [previousSensorData, setPreviousSensorData] = useState({});
@@ -253,6 +278,11 @@ const Dashboard = () => {
       
       if (hourlyAverages && Array.isArray(hourlyAverages)) {
         setHourlyAverages(hourlyAverages);
+      }
+      
+      // Update temperature statistics if available in the response
+      if (response.data.data.temperatureStats) {
+        setTemperatureStats(response.data.data.temperatureStats);
       }
       
       const formattedSensors = [];
@@ -605,11 +635,11 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">38.2°C</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.maxTemp}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">39.2°C</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.maxTemp}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
@@ -627,11 +657,11 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">22.5°C</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.minTemp}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">21.3°C</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.minTemp}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
@@ -649,12 +679,12 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">29.8°C</p>
-                    <p className="text-xs text-gray-500">ASide (24h avg)</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.avgTemp}</p>
+                    <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">30.2°C</p>
-                    <p className="text-xs text-gray-500">BSide (24h avg)</p>
+                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.avgTemp}</p>
+                    <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
               </div>
@@ -706,7 +736,6 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
-
           </div>
 
         </div>
@@ -741,6 +770,49 @@ const Dashboard = () => {
                   </label>
                 </div>
               </div>
+              <button 
+                  onClick={() => setShowLegendPopup(!showLegendPopup)}
+                  className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors border border-blue-100"
+                >
+                  {showLegendPopup ? 'Hide Legend' : 'Show Legend'}
+                </button>
+              {showLegendPopup && (
+                <div className="absolute top-12 right-3 bg-white p-3 rounded-lg shadow-lg border border-gray-200 z-10 max-h-60 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2">
+                    {sensors
+                      .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                      .map((sensor, index) => {
+                        const sensorId = `AS${index + 1}`;
+                        const isHidden = hiddenSensors[sensorId];
+                        return (
+                          <div 
+                            key={index} 
+                            className={`flex items-center text-xs cursor-pointer p-1 rounded ${isHidden ? 'opacity-40' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setHiddenSensors(prev => ({
+                                ...prev,
+                                [sensorId]: !prev[sensorId]
+                              }));
+                            }}
+                            title={isHidden ? 'Show sensor' : 'Hide sensor'}
+                          >
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2" 
+                              style={{
+                                backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                                opacity: isHidden ? 0.5 : 0.9,
+                                transition: 'opacity 0.2s'
+                              }}
+                            />
+                            <span className={isHidden ? 'line-through' : ''}>AS{index + 1}</span>
+                          </div>
+                        );
+                      }
+                      )}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
                 {['Live', '1h', '2h', '5h', '7h', '12h'].map((interval) => (
                   <button
@@ -760,19 +832,23 @@ const Dashboard = () => {
 
             {/* Chart Container */}
             <div className="relative h-[calc(100%-50px)] bg-white/50 rounded-lg p-3 border border-gray-100">
-              <Line
-                data={{
-                  labels: chartData.labels,
-                  datasets: sensors
-                    .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
-                    .map((sensor, index) => ({
-                      label: sensor.name,
-                      data: Array(24).fill(null).map((_, hour) => {
-                        // For demo purposes, we'll use a simple calculation
-                        // In a real app, you would use the actual historical data for each sensor
-                        const baseTemp = parseFloat(sensor.value) || 25;
-                        return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
-                      }),
+             
+              {(() => {
+                // Generate datasets
+                const datasets = sensors
+                  .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                  .map((sensor, index) => {
+                    const sensorId = `AS${index + 1}`;
+                    if (hiddenSensors[sensorId]) return null;
+                    
+                    const baseTemp = parseFloat(sensor.value) || 25;
+                    const data = Array(24).fill(null).map((_, hour) => {
+                      return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
+                    });
+
+                    return {
+                      label: sensorId,
+                      data,
                       borderColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
                       backgroundColor: `hsla(${(index * 137.5) % 360}, 70%, 50%, 0.1)`,
                       tension: 0.3,
@@ -786,147 +862,203 @@ const Dashboard = () => {
                       borderWidth: 1.5,
                       borderDash: [],
                       opacity: 0.9
-                    }))
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: true,
-                      position: 'top',
-                      align: 'center',
-                      labels: {
-                        color: '#4B5563',
-                        font: {
-                          size: 13,
-                          weight: 500
-                        },
-                        boxWidth: 12,
-                        padding: 15,
-                        usePointStyle: true,
-                      }
-                    },
-                    tooltip: {
-                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                      titleColor: '#1F2937',
-                      titleFont: { weight: '600' },
-                      bodyColor: '#4B5563',
-                      borderColor: '#E5E7EB',
-                      borderWidth: 1,
-                      padding: 12,
-                      boxShadow: '0 4px 20px -5px rgba(0, 0, 0, 0.1)',
-                      cornerRadius: 8,
-                      displayColors: false,
-                      callbacks: {
-                        label: function (context) {
-                          return `  ${context.dataset.label}: ${context.parsed.y}°C`;
-                        },
-                        title: function (context) {
-                          const date = new Date();
-                          date.setHours(context[0].dataIndex, 0, 0, 0);
-                          return date.toLocaleTimeString('en-US', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                          });
-                        },
-                        labelTextColor: function(context) {
-                          return context.datasetIndex === 0 ? 'rgb(79, 70, 229)' : 'rgb(220, 38, 38)';
-                        }
-                      }
-                    }
-                  },
-                  scales: {
-                    x: {
-                      grid: {
-                        display: false,
-                        drawTicks: false
-                      },
-                      border: {
-                        display: false
-                      },
-                      ticks: {
-                        color: '#6B7280',
-                        font: {
-                          size: 11
-                        },
-                        maxRotation: 0,
-                        autoSkip: true,
-                        maxTicksLimit: 8,
-                        padding: 8
-                      }
-                    },
-                    y: {
-                      grid: {
-                        color: 'rgba(229, 231, 235, 0.5)',
-                        drawBorder: false,
-                        drawTicks: false,
-                        borderDash: [4, 4]
-                      },
-                      border: {
-                        display: false
-                      },
-                      ticks: {
-                        color: '#6B7280',
-                        font: {
-                          size: 11
-                        },
-                        padding: 8,
-                        callback: function (value) {
-                          return value + '°C';
-                        }
-                      },
-                      min: 15,
-                      max: 45,
-                      beginAtZero: false
-                    }
-                  },
-                  elements: {
-                    line: {
-                      borderWidth: 2.5,
-                      borderJoinStyle: 'round',
-                      tension: 0.3
-                    },
-                    point: {
-                      radius: 0,
-                      hoverRadius: 6,
-                      hitRadius: 10
-                    }
-                  },
-                  interaction: {
-                    intersect: false,
-                    mode: 'index',
-                    axis: 'x'
-                  },
-                  layout: {
-                    padding: {
-                      top: 10,
-                      right: 15,
-                      bottom: 10,
-                      left: 5
-                    }
-                  },
-                  animation: {
-                    duration: 1000,
-                    easing: 'easeOutQuart'
-                  }
-                }}
-              />
+                    };
+                  })
+                  .filter(Boolean);
 
-              {/* Current Value Indicator */}
-              {/* <div className="absolute top-2 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                <div className="flex items-center text-sm font-medium text-gray-700">
-                  <span 
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
-                    }`}
-                  ></span>
-                  {isLoading ? 'Loading...' : error ? 'Error loading data' : 
-                    `Current: ${chartData.data[new Date().getHours()] || '--'}°C`
-                    }
+                // Calculate max temperature from visible data
+                const allTemps = datasets.flatMap(d => d.data);
+                const maxTemp = allTemps.length > 0 
+                  ? Math.max(...allTemps) + 5  // Add 5° buffer
+                  : 120; // Default if no data
+
+                return (
+                  <Line
+                    key={chartUpdateKey}
+                    data={{
+                      labels: chartData.labels,
+                      datasets: datasets
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: {
+                        legend: {
+                          display: false
+                        },
+                        tooltip: {
+                          filter: (tooltipItem) => {
+                            const datasetIndex = tooltipItem.datasetIndex;
+                            const sensorId = `AS${datasetIndex + 1}`;
+                            return !hiddenSensors[sensorId];
+                          },
+                          backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                          titleColor: '#1F2937',
+                          titleFont: { 
+                            weight: '600',
+                            size: 13
+                          },
+                          bodyColor: '#4B5563',
+                          bodyFont: {
+                            size: 12
+                          },
+                          borderColor: '#E5E7EB',
+                          borderWidth: 1,
+                          padding: 12,
+                          boxShadow: '0 4px 20px -5px rgba(0, 0, 0, 0.1)',
+                          cornerRadius: 8,
+                          displayColors: false,
+                          // Scrollable tooltip settings
+                          boxHeight: 20,
+                          bodySpacing: 4,
+                          maxHeight: 200,
+                          position: 'nearest',
+                          usePointStyle: true,
+                          caretSize: 8,
+                          callbacks: {
+                            label: function (context) {
+                              return `  ${context.dataset.label}: ${context.parsed.y}°C`;
+                            },
+                            title: function (context) {
+                              const date = new Date();
+                              date.setHours(context[0].dataIndex, 0, 0, 0);
+                              return [
+                                date.toLocaleDateString('en-US', { 
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                }),
+                                date.toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })
+                              ];
+                            },
+                            labelTextColor: function(context) {
+                              return `hsl(${(context.datasetIndex * 137.5) % 360}, 70%, 45%)`;
+                            },
+                            labelPointStyle: function() {
+                              return {
+                                pointStyle: 'circle',
+                                rotation: 0
+                              };
+                            }
+                          }
+                        }
+                      },
+                      scales: {
+                        x: {
+                          grid: {
+                            display: false,
+                            drawTicks: false
+                          },
+                          border: {
+                            display: false
+                          },
+                          ticks: {
+                            color: '#6B7280',
+                            font: {
+                              size: 11
+                            },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            padding: 8
+                          }
+                        },
+                        y: {
+                          grid: {
+                            color: 'rgba(229, 231, 235, 0.5)',
+                            drawBorder: false,
+                            drawTicks: false,
+                            borderDash: [4, 4]
+                          },
+                          border: {
+                            display: false
+                          },
+                          ticks: {
+                            color: '#6B7280',
+                            font: {
+                              size: 11
+                            },
+                            padding: 8,
+                            callback: function (value) {
+                              return value + '°C';
+                            }
+                          },
+                          min: 15,
+                          max: maxTemp, // Dynamic max based on visible data
+                          beginAtZero: false
+                        }
+                      },
+                      elements: {
+                        line: {
+                          borderWidth: 2.5,
+                          borderJoinStyle: 'round',
+                          tension: 0.3
+                        },
+                        point: {
+                          radius: 3, // Show points with a small radius
+                          backgroundColor: 'white',
+                          borderColor: context => {
+                            const index = context.dataIndex;
+                            return `hsl(${(index * 137.5) % 360}, 70%, 50%)`;
+                          },
+                          borderWidth: 1.5,
+                          hoverRadius: 6,
+                          hoverBorderWidth: 2,
+                          hitRadius: 10,
+                          pointStyle: 'circle',
+                          hoverBorderColor: context => {
+                            const index = context.dataIndex;
+                            return `hsl(${(index * 137.5) % 360}, 70%, 40%)`;
+                          }
+                        }
+                      },
+                      interaction: {
+                        intersect: false,
+                        mode: 'index',
+                        axis: 'x'
+                      },
+                      layout: {
+                        padding: {
+                          top: 10,
+                          right: 15,
+                          bottom: 10,
+                          left: 5
+                        }
+                      },
+                      animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                      }
+                    }}
+                  />
+                );
+              })()}
+
+              {/* Status and Data Points Indicator
+              <div className="absolute top-2 left-4 flex gap-2">
+                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                  <div className="flex items-center text-sm font-medium text-gray-700">
+                    <span 
+                      className={`w-2 h-2 rounded-full mr-2 ${
+                        isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
+                      }`}
+                    ></span>
+                    {isLoading ? 'Loading...' : error ? 'Error' : 'Live'}
+                  </div>
                 </div>
+                {!isLoading && !error && (
+                  <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                    <div className="text-sm font-medium text-gray-700">
+                      {sensors.filter(s => s.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2')).length} Sensors
+                    </div>
+                  </div>
+                )}
               </div> */}
+
             </div>
           </div>
         </div>

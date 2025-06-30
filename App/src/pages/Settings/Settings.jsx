@@ -95,8 +95,12 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = useCallback(() => {
+    console.log('fetchUserData called');
     const email = localStorage.getItem("email");
+    console.log('Retrieved email from localStorage:', email);
+    
     if (!email) {
+      console.error('No email found in localStorage');
       setIsLoading(false);
       return;
     }
@@ -108,55 +112,84 @@ const Settings = () => {
     const now = new Date().getTime();
     
     if (cachedData && cacheTimestamp && (now - parseInt(cacheTimestamp, 10)) < 5 * 60 * 1000) {
+      console.log('Using cached user data');
       setUserData(JSON.parse(cachedData));
       setIsLoading(false);
       return;
     }
     
+    console.log('Fetching fresh user data from API');
     setIsLoading(true);
     
-    API.post(`${process.env.REACT_APP_SERVER_URL}api/admin/getUserDetails`, { email })
+    const apiUrl = `${process.env.REACT_APP_SERVER_URL}api/admin/getUserDetails`;
+    console.log('API URL:', apiUrl);
+    
+    API.post(apiUrl, { email })
       .then(response => {
-        const userData = response.data.data;
-        if (userData) {
+        console.log('API Response:', response);
+        if (response.data && response.data.data) {
+          const userData = response.data.data;
+          console.log('User data received:', userData);
           setUserData(userData);
           // Cache the data with timestamp
           localStorage.setItem(cacheKey, JSON.stringify(userData));
           localStorage.setItem(`${cacheKey}_timestamp`, now.toString());
+        } else {
+          console.error('Unexpected API response format:', response);
         }
       })
       .catch(error => {
         console.error("Error fetching user data:", error);
+        if (error.response) {
+          console.error('Error response data:', error.response.data);
+          console.error('Error status:', error.response.status);
+          console.error('Error headers:', error.response.headers);
+        } else if (error.request) {
+          console.error('No response received:', error.request);
+        } else {
+          console.error('Error setting up request:', error.message);
+        }
         // Use cached data if available
         if (cachedData) {
+          console.log('Falling back to cached data');
           setUserData(JSON.parse(cachedData));
         }
       })
       .finally(() => {
+        console.log('Finished loading user data');
         setIsLoading(false);
       });
-  }, []); // Removed userData from dependencies to prevent infinite loops
+  }, []); // Empty dependency array since we're using localStorage
 
   useEffect(() => {
+    console.log('Settings component mounted, fetching user data...');
+    
+    // Initial fetch
     fetchUserData();
     
     // Set up a refresh interval (e.g., every 5 minutes)
-    const refreshInterval = setInterval(fetchUserData, 5 * 60 * 1000);
+    const refreshInterval = setInterval(() => {
+      console.log('Refreshing user data...');
+      fetchUserData();
+    }, 5 * 60 * 1000);
     
     // Also refresh when the page becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        console.log('Page became visible, refreshing data...');
         fetchUserData();
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     
+    // Cleanup function
     return () => {
+      console.log('Cleaning up Settings component...');
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchUserData]);
+  }, [fetchUserData]); // Include fetchUserData in dependencies
 
   useEffect(() => {
     const email = localStorage.getItem("email");

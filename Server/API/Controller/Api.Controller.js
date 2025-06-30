@@ -3,44 +3,44 @@ import sensormodel from "../Models/sensorModel.js";
 // Helper function to filter out null/undefined/"null" values from an object
 const filterNullValues = (obj) => {
   if (!obj) return null;
-  
+
   // Skip MongoDB internal fields and __v
   const skipFields = ['_id', '__v', 'buffer'];
-  
+
   return Object.entries(obj).reduce((acc, [key, value]) => {
     // Skip internal fields
     if (skipFields.includes(key)) return acc;
-    
+
     // Skip null, undefined, empty strings, or string "null"
     if (value === null || value === undefined || value === '' || value === 'null') {
       return acc;
     }
-    
+
     // Handle nested objects
     if (typeof value === 'object' && !Array.isArray(value)) {
       // Skip the _id buffer object
       if (key === '_id' && value.buffer) return acc;
-      
+
       const filtered = filterNullValues(value);
       if (filtered && Object.keys(filtered).length > 0) {
         acc[key] = filtered;
       }
-    } 
+    }
     // Handle arrays
     else if (Array.isArray(value)) {
       const filteredArray = value
         .map(item => typeof item === 'object' ? filterNullValues(item) : item)
         .filter(item => item !== null && item !== undefined && item !== '' && item !== 'null');
-      
+
       if (filteredArray.length > 0) {
         acc[key] = filteredArray;
       }
-    } 
+    }
     // Handle all other values
     else {
       acc[key] = value;
     }
-    
+
     return acc;
   }, {});
 };
@@ -49,46 +49,61 @@ class ApiController {
 
   _calculateTimeRange(interval) {
     const endTime = new Date();
-  let startTime = new Date();
-  
-  switch (interval) {
-    case '1h':
-      startTime.setHours(endTime.getHours() - 1);
-      break;
-    case '2h':
-      startTime.setHours(endTime.getHours() - 2);
-      break;
-    case '5h':
-      startTime.setHours(endTime.getHours() - 5);
-      break;
-    case '7h':
-      startTime.setHours(endTime.getHours() - 7);
-      break;
-    case '12h':
-      startTime.setHours(endTime.getHours() - 12);
-      break;
-    case 'Live':
-      // For live data, use last 1 hour as default
-      startTime.setHours(endTime.getHours() - 1);
-      break;
-    default:
-      startTime.setHours(endTime.getHours() - 1);
-  }
-  
-  return { startTime, endTime };
+    let startTime = new Date();
+
+    switch (interval) {
+      case 'Live':
+        // For live data, show last 5 minutes
+        startTime.setMinutes(endTime.getMinutes() - 5);
+        break;
+      case '1h':
+        startTime.setHours(endTime.getHours() - 1);
+        break;
+      case '2h':
+        startTime.setHours(endTime.getHours() - 2);
+        break;
+      case '5h':
+        startTime.setHours(endTime.getHours() - 5);
+        break;
+      case '7h':
+        startTime.setHours(endTime.getHours() - 7);
+        break;
+      case '12h':
+        startTime.setHours(endTime.getHours() - 12);
+        break;
+      case '1D':
+        startTime.setDate(endTime.getDate() - 1);
+        break;
+      case '1W':
+        startTime.setDate(endTime.getDate() - 7);
+        break;
+      case '1M':
+        startTime.setMonth(endTime.getMonth() - 1);
+        break;
+      case '6M':
+        startTime.setMonth(endTime.getMonth() - 6);
+        break;
+      default:
+        // Default to 1 hour if interval is not recognized
+        console.warn(`Unsupported interval '${interval}', defaulting to 1 hour`);
+        startTime.setHours(endTime.getHours() - 1);
+    }
+
+    console.log(`[DEBUG] Time range for interval '${interval}': ${startTime.toISOString()} to ${endTime.toISOString()}`);
+    return { startTime, endTime };
   }
 
   // Fetch historical data for a specific time range, user ID, and waveguide
   async _fetchHistoricalData(userId, waveguide, startTime, endTime) {
     try {
       // Ensure we have valid Date objects
-      if (!(startTime instanceof Date) || isNaN(startTime.getTime()) || 
-          !(endTime instanceof Date) || isNaN(endTime.getTime())) {
+      if (!(startTime instanceof Date) || isNaN(startTime.getTime()) ||
+        !(endTime instanceof Date) || isNaN(endTime.getTime())) {
         throw new Error('Invalid date range provided');
       }
 
       console.log(`[DEBUG] Fetching data for user ${userId}, waveguide ${waveguide} from ${startTime.toISOString()} to ${endTime.toISOString()}`);
-      
+
       // Format times to match the database format (YYYY-MM-DD HH:mm:ss)
       const formatTimeForDB = (date) => {
         if (!(date instanceof Date) || isNaN(date.getTime())) {
@@ -111,27 +126,27 @@ class ApiController {
 
       // Execute the query for the requested time range
       let records = await sensormodel.find(query).sort({ TIME: 1 }).lean();
-      
+
       console.log(`[DEBUG] Records found in requested time range: ${records.length}`);
-      
+
       // If no records found in the requested time range, get the most recent data
       if (records.length === 0) {
         console.log('[DEBUG] No records found in requested time range, fetching most recent data...');
-        
+
         // Query for the most recent data regardless of time range
         const recentQuery = {
           id: userId,
           waveguide: waveguide
         };
-        
+
         records = await sensormodel.find(recentQuery)
           .sort({ TIME: -1 }) // Sort by time descending to get most recent first
           .limit(100) // Limit to most recent 100 records
           .lean();
-          
+
         console.log(`[DEBUG] Fetched ${records.length} most recent records`);
       }
-      
+
       if (records.length > 0) {
         console.log('[DEBUG] Sample record:', JSON.stringify(records[0], null, 2));
       } else {
@@ -160,12 +175,12 @@ class ApiController {
       if (records.length > 0) {
         // Sort by time ascending for consistent results
         records.sort((a, b) => (a.TIME > b.TIME ? 1 : -1));
-        
+
         records.forEach(record => {
           try {
             let sum = 0;
             let count = 0;
-            
+
             // Sum up all sensor values
             for (let i = 1; i <= 38; i++) {
               const sensorValue = parseFloat(record[`sensor${i}`]);
@@ -174,7 +189,7 @@ class ApiController {
                 count++;
               }
             }
-            
+
             // Calculate average if we have valid sensor values
             if (count > 0) {
               result.timestamps.push(record.TIME);
@@ -239,7 +254,7 @@ class ApiController {
     for (const doc of docs) {
       const hour = new Date(doc.createdAt).getHours();
       const waveguide = doc.waveguide;
-      
+
       // Only add if we don't have data for this hour and waveguide yet
       if (hourlyData[hour][waveguide].length === 0) {
         // Collect all sensor values
@@ -248,7 +263,7 @@ class ApiController {
           const value = parseFloat(doc[`sensor${i}`]);
           if (!isNaN(value)) values.push(value);
         }
-        
+
         if (values.length > 0) {
           hourlyData[hour][waveguide] = values; // Store the first valid reading we find
         }
@@ -270,24 +285,24 @@ class ApiController {
     // Initialize data structures
     const hourlyData = new Map();
     const allSensorValues = [];
-    
+
     // Process each document into hourly buckets
     docs.forEach(doc => {
       const timestamp = new Date(doc.createdAt);
       const hour = timestamp.getHours();
       const dateKey = timestamp.toISOString().split('T')[0];
       const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
-      
+
       if (!hourlyData.has(hourKey)) {
         hourlyData.set(hourKey, {
           timestamp: new Date(timestamp).setMinutes(0, 0, 0),
           dataPoints: []  // Store all data points for this hour
         });
       }
-      
+
       // Store the complete document for this hour
       const hourData = hourlyData.get(hourKey);
-      
+
       // Process all sensors for this document
       const sensorReadings = {};
       for (let i = 1; i <= 38; i++) {
@@ -303,7 +318,7 @@ class ApiController {
           });
         }
       }
-      
+
       // Only add if we have valid sensor readings
       if (Object.keys(sensorReadings).length > 0) {
         hourData.dataPoints.push({
@@ -315,7 +330,7 @@ class ApiController {
 
     // Process hourly data into response format
     const sensorData = [];
-    
+
     // Convert map to array and sort by timestamp
     const sortedHours = Array.from(hourlyData.entries())
       .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
@@ -324,12 +339,12 @@ class ApiController {
     for (const [_, hourData] of sortedHours) {
       const timestamp = new Date(hourData.timestamp);
       const hour = timestamp.getHours();
-      
+
       // Format timestamp for display
       const period = hour >= 12 ? 'PM' : 'AM';
       const hour12 = hour % 12 || 12;
       const timeString = `${hour12}:00 ${period}`;
-      
+
       // Prepare sensor data for this hour
       const hourSensorData = {
         timestamp: timeString,
@@ -341,21 +356,21 @@ class ApiController {
           totalReadings: hourData.dataPoints.length
         }
       };
-      
+
       // Calculate statistics across all data points
       const allTemps = [];
-      
+
       hourData.dataPoints.forEach(dataPoint => {
         const temps = Object.values(dataPoint.sensors);
         allTemps.push(...temps);
-        
+
         // Update min/max
         const pointMin = Math.min(...temps);
         const pointMax = Math.max(...temps);
         hourSensorData.stats.minTemp = Math.min(hourSensorData.stats.minTemp, pointMin);
         hourSensorData.stats.maxTemp = Math.max(hourSensorData.stats.maxTemp, pointMax);
       });
-      
+
       // Calculate average temperature for this hour
       if (allTemps.length > 0) {
         hourSensorData.stats.avgTemp = parseFloat(
@@ -365,10 +380,10 @@ class ApiController {
         hourSensorData.stats.minTemp = 0;
         hourSensorData.stats.maxTemp = 0;
       }
-        
+
       sensorData.push(hourSensorData);
     }
-    
+
     // Calculate statistics
     const sideValues = allSensorValues.reduce((acc, { sensor, value, side }) => {
       if (!acc[side]) {
@@ -377,9 +392,9 @@ class ApiController {
       acc[side].push(value);
       return acc;
     }, {});
-    
+
     const stats = {};
-    
+
     // Calculate stats for each side
     for (const [side, values] of Object.entries(sideValues)) {
       if (values.length > 0) {
@@ -391,17 +406,17 @@ class ApiController {
       }
     }
 
-    return { 
+    return {
       sensorData,
       stats
     };
   }
-v
+  v
   // Helper function to calculate average temperature from sensor data
   _calculateAverageTemperature(doc) {
     let sum = 0;
     let count = 0;
-    
+
     for (let i = 1; i <= 38; i++) {
       const sensorValue = parseFloat(doc[`sensor${i}`]);
       if (!isNaN(sensorValue)) {
@@ -409,7 +424,7 @@ v
         count++;
       }
     }
-    
+
     return count > 0 ? sum / count : 0;
   }
 
@@ -418,16 +433,16 @@ v
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
       if (!id) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
-          message: 'User ID is required in headers' 
+          message: 'User ID is required in headers'
         });
       }
 
       // Get interval from query params (default to '1h' if not provided)
       const { interval = '1h' } = req.query;
       const validIntervals = ['Live', '1h', '2h', '5h', '7h', '12h'];
-      
+
       if (!validIntervals.includes(interval)) {
         return res.status(400).json({
           success: false,
@@ -449,38 +464,38 @@ v
       // Function to calculate differences between current and previous readings
       const calculateDifferences = (current, previous) => {
         if (!current) return null;
-        
+
         const result = { ...current };
         result.sensors = {};
-        
+
         // Process each sensor
         for (let i = 1; i <= 38; i++) {
           const sensorKey = `sensor${i}`;
           const sensorValue = current[sensorKey];
-          
+
           if (sensorValue === undefined) continue;
-          
+
           const sensorData = {
             value: sensorValue
           };
-          
+
           // Add difference and trend if previous data exists
           if (previous && previous[0] && previous[0][sensorKey] !== undefined) {
             const currentVal = parseFloat(sensorValue);
             const prevVal = parseFloat(previous[0][sensorKey]);
-            
+
             if (!isNaN(currentVal) && !isNaN(prevVal)) {
               const diff = currentVal - prevVal;
               sensorData.difference = Math.abs(diff).toFixed(2);
               sensorData.trend = diff >= 0 ? 'up' : 'down';
             }
           }
-          
+
           result.sensors[sensorKey] = sensorData;
           // Remove the original flat sensor key
           delete result[sensorKey];
         }
-        
+
         return result;
       };
 
@@ -525,15 +540,15 @@ v
 
       // Calculate averages and format output for all 24 hours
       const tableData = [];
-      
+
       for (let hour = 0; hour < 24; hour++) {
         const hourData = hourlyData[hour] || { WG1: [], WG2: [] };
         const wg1Data = hourData.WG1 || [];
         const wg2Data = hourData.WG2 || [];
-        
+
         const timeString = this._formatHour(hour);
         const entries = [];
-  
+
         // Process WG1 (ASide) if data exists
         if (wg1Data.length > 0) {
           const avg = wg1Data.reduce((sum, val) => sum + val, 0) / wg1Data.length;
@@ -545,7 +560,7 @@ v
             });
           }
         }
-  
+
         // Process WG2 (BSide) if data exists
         if (wg2Data.length > 0) {
           const avg = wg2Data.reduce((sum, val) => sum + val, 0) / wg2Data.length;
@@ -557,7 +572,7 @@ v
             });
           }
         }
-  
+
         // Always add the hour to results, even if no entries
         tableData.push({
           index: hour + 1, // 1-based index
@@ -597,11 +612,11 @@ v
         },
         message: 'Dashboard data fetched successfully'
       };
-  
+
       res.status(200).json(response);
     } catch (error) {
       console.error('[ERROR] Error in getDashboardAPi:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: 'Internal server error',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined,
@@ -609,26 +624,26 @@ v
       });
     }
   }
-  
+
   async getAvgTable(req, res) {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
       if (!id) {
         return res.status(400).json({ error: 'User ID is required in headers' });
       }
-  
+
       // Get current day boundaries in server's local time
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-      
+
       // Get previous day boundaries
       const startOfPrevDay = new Date(now);
       startOfPrevDay.setDate(startOfPrevDay.getDate() - 1);
       startOfPrevDay.setHours(0, 0, 0, 0);
       const endOfPrevDay = new Date(startOfPrevDay);
       endOfPrevDay.setDate(endOfPrevDay.getDate() + 1);
-  
+
       // Get data for both days in parallel
       const [currentDayData, prevDayData] = await Promise.all([
         this._getHourlyData(id, startOfDay, endOfDay),
@@ -640,18 +655,18 @@ v
         WG1: currentDayData[hour].WG1.length > 0 ? currentDayData[hour].WG1 : prevDayData[hour].WG1,
         WG2: currentDayData[hour].WG2.length > 0 ? currentDayData[hour].WG2 : prevDayData[hour].WG2
       }));
-  
+
       // Calculate averages and format output for all 24 hours
       const tableData = [];
-      
+
       for (let hour = 0; hour < 24; hour++) {
         const hourData = hourlyData[hour] || { WG1: [], WG2: [] };
         const wg1Data = hourData.WG1 || [];
         const wg2Data = hourData.WG2 || [];
-        
+
         const timeString = this._formatHour(hour);
         const entries = [];
-  
+
         // Process WG1 (ASide) if data exists
         if (wg1Data.length > 0) {
           const avg = wg1Data.reduce((sum, val) => sum + val, 0) / wg1Data.length;
@@ -663,7 +678,7 @@ v
             });
           }
         }
-  
+
         // Process WG2 (BSide) if data exists
         if (wg2Data.length > 0) {
           const avg = wg2Data.reduce((sum, val) => sum + val, 0) / wg2Data.length;
@@ -675,7 +690,7 @@ v
             });
           }
         }
-  
+
         // Always add the hour to results, even if no entries
         tableData.push({
           index: hour + 1, // 1-based index
@@ -683,24 +698,24 @@ v
           entries
         });
       }
-  
+
       res.status(200).json(tableData);
     } catch (error) {
       console.error('Error in getAvgTable:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating temperature summary',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
-  
+
   async getDashboardchart(req, res) {
     console.log('[DEBUG] getDashboardchart called with query:', req.query);
     try {
       const { side, interval = '1h' } = req.query;
       const validIntervals = ['Live', '1h', '2h', '5h', '7h', '12h'];
       const validSides = ['Aside', 'Bside'];
-  
+
       // Validate input parameters
       if (!side || !validSides.includes(side)) {
         return res.status(400).json({
@@ -708,25 +723,25 @@ v
           message: `Invalid or missing side parameter. Must be "Aside" or "Bside"`,
         });
       }
-  
+
       if (!validIntervals.includes(interval)) {
         return res.status(400).json({
           success: false,
           message: `Invalid interval. Must be one of: ${validIntervals.join(', ')}`,
         });
       }
-  
+
       const userId = 'XY001'; // Default user ID
       const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
-      
+
       // Calculate time range based on interval
       const timeRange = this._calculateTimeRange(interval);
       const startTime = timeRange.startTime;
       const endTime = timeRange.endTime;
-  
+
       // Fetch historical data for the specified time range
       const historicalData = await this._fetchHistoricalData(userId, waveguide, startTime, endTime);
-      
+
       // Prepare response
       const response = {
         success: true,
@@ -739,7 +754,7 @@ v
         },
         message: `Historical data for ${interval} interval fetched successfully`,
       };
-  
+
       return res.status(200).json(response);
     } catch (error) {
       console.error('[ERROR] Error in getDashboardchart:', error);
@@ -767,17 +782,17 @@ v
         .lean();
 
       const latestWG1 = await sensormodel
-        .findOne({ 
+        .findOne({
           id: id,  // Filter by the provided ID
-          waveguide: 'WG1' 
+          waveguide: 'WG1'
         })
         .sort({ updatedAt: -1 })
         .lean();
 
       const latestWG2 = await sensormodel
-        .findOne({ 
+        .findOne({
           id: id,  // Filter by the provided ID
-          waveguide: 'WG2' 
+          waveguide: 'WG2'
         })
         .sort({ updatedAt: -1 })
         .lean();
@@ -787,11 +802,11 @@ v
         .filter(Boolean)
         .map(wg => filterNullValues(wg))
         .filter(Boolean);
-        
+
       res.status(200).json(waveguides);
     } catch (error) {
       console.error('Error in getallsensor:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while fetching sensor data',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -801,7 +816,7 @@ v
   _calculateTimeRange(interval) {
     const now = new Date();
     let startTime = new Date(now);
-    
+
     switch (interval) {
       case '1h':
         startTime.setHours(now.getHours() - 1);
@@ -824,10 +839,10 @@ v
         startTime.setMinutes(now.getMinutes() - 5);
         break;
     }
-    
+
     return { startTime, endTime: now };
   }
-  
+
   _formatTimeForDB(date) {
     const pad = num => num.toString().padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
@@ -844,9 +859,9 @@ v
       // Validate interval
       const validIntervals = ['1Hr', '2Hr', '5Hr', '7Hr', '12Hr', '24Hr'];
       if (!validIntervals.includes(Interval)) {
-        return res.status(400).json({ 
-          error: 'Invalid interval', 
-          message: 'Valid intervals are: 1Hr, 2Hr, 5Hr, 7Hr, 12Hr, 24Hr' 
+        return res.status(400).json({
+          error: 'Invalid interval',
+          message: 'Valid intervals are: 1Hr, 2Hr, 5Hr, 7Hr, 12Hr, 24Hr'
         });
       }
 
@@ -858,7 +873,7 @@ v
 
       const latestTime = new Date(latestRecord.TIME);
       const intervalData = [];
-      
+
       // Define interval configurations
       const intervalConfigs = {
         '1Hr': { duration: 60, points: 12 },    // 60min / 12 = 5min intervals
@@ -889,7 +904,7 @@ v
         // Calculate point time based on minutes from end time
         const pointTime = new Date(endTime);
         pointTime.setMinutes(endTime.getMinutes() - (i * minutesBetweenPoints));
-        
+
         // Set point end time (next point time - 1 minute)
         const pointEndTime = new Date(pointTime);
         if (i > 0) {
@@ -897,16 +912,16 @@ v
         }
 
         // Format time for display
-        const timeLabel = pointEndTime.toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
+        const timeLabel = pointEndTime.toLocaleTimeString('en-US', {
+          hour: '2-digit',
           minute: '2-digit',
-          hour12: true 
+          hour12: true
         });
 
         // Get all records within the current interval
         const startTimeStr = this._formatTimeForDB(pointTime);
         const endTimeStr = this._formatTimeForDB(i === 0 ? new Date() : new Date(pointEndTime.getTime() + 1));
-        
+
         const [wg1Records, wg2Records] = await Promise.all([
           sensormodel.find({
             id,
@@ -919,7 +934,7 @@ v
             TIME: { $gte: startTimeStr, $lte: endTimeStr }
           }).sort({ TIME: 1 }).lean()
         ]);
-        
+
         // Get the latest record for display
         const wg1Record = wg1Records[wg1Records.length - 1];
         const wg2Record = wg2Records[wg2Records.length - 1];
@@ -927,7 +942,7 @@ v
         // Process WG1 data
         const wg1AllValues = [];
         const wg1Values = [];
-        
+
         // Process all WG1 records for the interval
         wg1Records.forEach(record => {
           Object.entries(record).forEach(([key, value]) => {
@@ -944,7 +959,7 @@ v
         // Process WG2 data
         const wg2AllValues = [];
         const wg2Values = [];
-        
+
         // Process all WG2 records for the interval
         wg2Records.forEach(record => {
           Object.entries(record).forEach(([key, value]) => {
@@ -961,7 +976,7 @@ v
         // Calculate statistics for the interval
         const allValues = [...wg1AllValues, ...wg2AllValues];
         const currentValues = [...wg1Values, ...wg2Values];
-        
+
         // Helper function to calculate statistics
         const calculateStats = (values) => {
           if (values.length === 0) return { average: null, max: null, min: null };
@@ -971,11 +986,11 @@ v
             min: Math.min(...values)
           };
         };
-        
+
         const allStats = calculateStats(allValues);
         const wg1Stats = calculateStats(wg1AllValues);
         const wg2Stats = calculateStats(wg2AllValues);
-        
+
         intervalData.push({
           time: timeLabel,
           timestamp: pointEndTime.toISOString(),
@@ -1021,7 +1036,7 @@ v
 
     } catch (error) {
       console.error('Error in AverageTempbyHour:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while calculating hourly average temperatures',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -1042,7 +1057,7 @@ v
 
       // Validate parameters
       if (!sensorrange || !sides || !startDate || !endDate || !averageBy) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Missing required parameters',
           required: ['sensorrange', 'sides', 'startDate', 'endDate', 'averageBy']
         });
@@ -1060,7 +1075,7 @@ v
       // Validate sides
       const validSides = ['Aside', 'Bside', 'Allside'];
       if (!validSides.includes(sides)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid side parameter',
           validValues: validSides
         });
@@ -1069,7 +1084,7 @@ v
       // Validate averageBy
       const validAverageBy = ['Hour', 'Day'];
       if (!validAverageBy.includes(averageBy)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid averageBy parameter',
           validValues: validAverageBy
         });
@@ -1078,14 +1093,14 @@ v
       // Handle sensor range - support 'All-Data' as a special case and single sensor values
       let startSensor = 1;
       let endSensor = 38;
-      
+
       if (sensorrange.toLowerCase() === 'all-data') {
         // Use default range 1-38 for All-Data
       } else if (sensorrange.toLowerCase().startsWith('sensor')) {
         // Handle single sensor format like 'sensor1'
         const sensorNum = parseInt(sensorrange.replace(/\D/g, ''));
         if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor number',
             validRange: '1-38 or sensor1-sensor38 or All-Data'
           });
@@ -1096,17 +1111,17 @@ v
         // Handle range format like '1-10'
         const rangeParts = sensorrange.split('-');
         if (rangeParts.length !== 2) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor range format',
             validFormat: '1-38 or sensor1-sensor38 or All-Data'
           });
         }
-        
+
         const start = parseInt(rangeParts[0]);
         const end = parseInt(rangeParts[1]);
-        
+
         if (isNaN(start) || isNaN(end) || start < 1 || end > 38 || start > end) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor range',
             validRange: '1-38 or sensor1-sensor38 or All-Data'
           });
@@ -1132,7 +1147,7 @@ v
       }
 
       console.log('Executing query:', JSON.stringify(query, null, 2));
-      
+
       // Helper function to create sensor field conversion with safe number handling
       const createSensorConversion = (sensorNum) => {
         const sensorKey = `sensor${sensorNum}`;
@@ -1203,7 +1218,7 @@ v
                 const sensorKey = `sensor${startSensor + i}`;
                 return [
                   sensorKey,
-                  { 
+                  {
                     $cond: {
                       if: { $eq: [`$${sensorKey}`, null] },
                       then: null,
@@ -1230,7 +1245,7 @@ v
       }
 
       console.log('Executing aggregation pipeline:', JSON.stringify(pipeline, null, 2));
-      
+
       // Execute the aggregation
       let formattedResults;
       try {
@@ -1256,7 +1271,7 @@ v
 
     } catch (error) {
       console.error('Error in reportAverageData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating the report',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -1278,7 +1293,7 @@ v
 
       // Validate parameters
       if (!sensorrange || !sides || !startDate || !endDate || !averageBy) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Missing required parameters',
           required: ['sensorrange', 'sides', 'startDate', 'endDate', 'averageBy']
         });
@@ -1296,7 +1311,7 @@ v
       // Validate sides
       const validSides = ['Aside', 'Bside', 'Allside'];
       if (!validSides.includes(sides)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid side parameter',
           validValues: validSides
         });
@@ -1305,7 +1320,7 @@ v
       // Validate averageBy
       const validAverageBy = ['Hour', 'Day'];
       if (!validAverageBy.includes(averageBy)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Invalid averageBy parameter',
           validValues: validAverageBy
         });
@@ -1314,14 +1329,14 @@ v
       // Handle sensor range - support 'All-Data' as a special case and single sensor values
       let startSensor = 1;
       let endSensor = 38;
-      
+
       if (sensorrange.toLowerCase() === 'all-data') {
         // Use default range 1-38 for All-Data
       } else if (sensorrange.toLowerCase().startsWith('sensor')) {
         // Handle single sensor format like 'sensor1'
         const sensorNum = parseInt(sensorrange.replace(/\D/g, ''));
         if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor number',
             validRange: '1-38 or sensor1-sensor38 or All-Data'
           });
@@ -1332,17 +1347,17 @@ v
         // Handle range format like '1-10'
         const rangeParts = sensorrange.split('-');
         if (rangeParts.length !== 2) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor range format',
             validFormat: '1-38 or sensor1-sensor38 or All-Data'
           });
         }
-        
+
         const start = parseInt(rangeParts[0]);
         const end = parseInt(rangeParts[1]);
-        
+
         if (isNaN(start) || isNaN(end) || start < 1 || end > 38 || start > end) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             error: 'Invalid sensor range',
             validRange: '1-38 or sensor1-sensor38 or All-Data'
           });
@@ -1368,7 +1383,7 @@ v
       }
 
       console.log('Executing query:', JSON.stringify(query, null, 2));
-      
+
       // Build the aggregation pipeline to get one reading per time period
       const pipeline = [
         { $match: query },
@@ -1412,7 +1427,7 @@ v
       ];
 
       console.log('Executing aggregation pipeline:', JSON.stringify(pipeline, null, 2));
-      
+
       // Execute the aggregation
       let results;
       try {
@@ -1438,7 +1453,7 @@ v
 
     } catch (error) {
       console.error('Error in reportPerData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating the report',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -1460,7 +1475,7 @@ v
 
       // Validate parameters
       if (!sensorrange || !sides || !startDate || !endDate) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           error: 'Missing required parameters',
           required: ['sensorrange', 'sides', 'startDate', 'endDate']
         });
@@ -1472,15 +1487,15 @@ v
 
       // Validate date format
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-        return res.status(400).json({ 
-          error: 'Invalid date format. Please use ISO 8601 format (e.g., 2023-01-01T00:00:00.000Z)' 
+        return res.status(400).json({
+          error: 'Invalid date format. Please use ISO 8601 format (e.g., 2023-01-01T00:00:00.000Z)'
         });
       }
 
       // Build query
-      const query = { 
+      const query = {
         id,
-        createdAt: { 
+        createdAt: {
           $gte: start,
           $lte: end
         }
@@ -1497,13 +1512,13 @@ v
       }
 
       console.log('Executing query:', JSON.stringify(query, null, 2));
-      
+
       // Fetch all records between the specified dates
       let results;
       try {
         results = await sensormodel.find(query).sort({ createdAt: 1 }).lean();
         console.log(`Found ${results?.length || 0} records`);
-        
+
         // Process results to remove MongoDB-specific fields and map waveguide values
         results = results.map(doc => {
           // Create a new object with only the fields we want to keep
@@ -1512,19 +1527,19 @@ v
             // Map waveguide values to 'Aside'/'Bside'
             waveguide: doc.waveguide === 'WG1' ? 'Aside' : 'Bside'
           };
-          
+
           // Remove MongoDB-specific fields
           delete processedDoc._id;
           delete processedDoc.id;
           delete processedDoc.updatedAt;
           delete processedDoc.__v;
           delete processedDoc.createdAt;
-          
+
           // Filter sensor data based on the requested range if not 'all-data'
           if (sensorrange.toLowerCase() !== 'all-data') {
             let startSensor = 1;
             let endSensor = 38;
-            
+
             // Parse sensor range if not 'all-data'
             const rangeMatch = sensorrange.match(/^(\d+)-(\d+)$/);
             if (rangeMatch) {
@@ -1538,7 +1553,7 @@ v
                 endSensor = sensorNum;
               }
             }
-            
+
             // Remove sensors outside the requested range
             for (let i = 1; i <= 38; i++) {
               if (i < startSensor || i > endSensor) {
@@ -1546,7 +1561,7 @@ v
               }
             }
           }
-          
+
           return processedDoc;
         });
       } catch (error) {
@@ -1568,7 +1583,7 @@ v
 
     } catch (error) {
       console.error('Error in reportDateData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating the report',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -1584,41 +1599,41 @@ v
       if (!id) {
         return mres.status(400).json({ error: 'User ID is required in headers' });
       }
-  
+
       // Get query parameters
       const { sensorrange, sides, count } = req.query;
-  
+
       // Validate parameters
       if (!sensorrange || !sides || !count) {
-        return mres.status(400).json({ 
+        return mres.status(400).json({
           error: 'Missing required parameters',
           required: ['sensorrange', 'sides', 'count']
         });
       }
-  
+
       // Parse and validate count
       let recordLimit = parseInt(count, 10);
       if (isNaN(recordLimit) || recordLimit <= 0) {
-        return mres.status(400).json({ 
+        return mres.status(400).json({
           error: 'Invalid count parameter. Must be a positive integer.',
           validExamples: [100, 500, 1000]
         });
       }
-  
+
       // Set a maximum limit to prevent excessive load
       const MAX_LIMIT = 5000;
       if (recordLimit > MAX_LIMIT) {
-        return mres.status(400).json({ 
+        return mres.status(400).json({
           error: `Count exceeds maximum allowed value of ${MAX_LIMIT}`,
           maxAllowed: MAX_LIMIT
         });
       }
-  
+
       // Build query (without date range)
-      const query = { 
+      const query = {
         id
       };
-  
+
       // Handle sides
       if (sides === 'Aside') {
         query.waveguide = 'WG1';
@@ -1627,9 +1642,9 @@ v
       } else if (sides === 'Allside') {
         query.waveguide = { $in: ['WG1', 'WG2'] };
       }
-  
+
       console.log('Executing query:', JSON.stringify(query, null, 2));
-      
+
       // Fetch records with limit applied
       let results;
       try {
@@ -1638,31 +1653,31 @@ v
           .sort({ createdAt: -1 })  // Get newest records first
           .limit(recordLimit)       // Apply count limit
           .lean();
-  
+
         // Reverse to get chronological order (oldest first)
         results.reverse();
-        
+
         console.log(`Found ${results?.length || 0} records`);
-  
+
         // Process results
         results = results.map(doc => {
           const processedDoc = {
             ...doc,
             waveguide: doc.waveguide === 'WG1' ? 'Aside' : 'Bside'
           };
-          
+
           // Remove unnecessary fields
           delete processedDoc._id;
           delete processedDoc.id;
           delete processedDoc.updatedAt;
           delete processedDoc.__v;
           delete processedDoc.createdAt;
-          
+
           // Filter sensor data based on requested range
           if (sensorrange.toLowerCase() !== 'all-data') {
             let startSensor = 1;
             let endSensor = 38;
-            
+
             // Parse sensor range
             const rangeMatch = sensorrange.match(/^(\d+)-(\d+)$/);
             if (rangeMatch) {
@@ -1675,7 +1690,7 @@ v
                 endSensor = sensorNum;
               }
             }
-            
+
             // Remove sensors outside the requested range
             for (let i = 1; i <= 38; i++) {
               if (i < startSensor || i > endSensor) {
@@ -1683,14 +1698,14 @@ v
               }
             }
           }
-          
+
           return processedDoc;
         });
       } catch (error) {
         console.error('Query error:', error);
         throw new Error(`Failed to fetch data: ${error.message}`);
       }
-  
+
       mres.json({
         success: true,
         data: results,
@@ -1701,17 +1716,17 @@ v
           returnedRecords: results.length
         }
       });
-  
+
     } catch (error) {
       console.error('Error in reportCountData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating the report',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
 
-  async heatmapData(req, res) {   
+  async heatmapData(req, res) {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
       if (!id) {
@@ -1726,7 +1741,7 @@ v
       if (!side || !['ASIDE', 'BSIDE'].includes(sideUpper)) {
         return res.status(400).json({ error: 'Valid side parameter is required (ASide or BSide)' });
       }
-      
+
       // Map frontend side values to database waveguide values
       const waveguideMap = {
         'ASIDE': 'WG1',
@@ -1745,7 +1760,7 @@ v
       // Parse dates
       const start = new Date(startDate);
       const end = new Date(endDate);
-      
+
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
         return res.status(400).json({ error: 'Invalid date format. Please use ISO 8601 format (e.g., 2023-01-01T00:00:00.000Z)' });
       }
@@ -1834,31 +1849,31 @@ v
       ];
 
       // Create separate pipelines for min and max to avoid $cond in $group
-      const groupStage = value.toLowerCase() === 'max' 
+      const groupStage = value.toLowerCase() === 'max'
         ? {
-            $group: {
-              _id: {
-                date: "$date",
-                sensorName: "$sensors.k"
-              },
-              date: { $first: "$date" },
-              sensorName: { $first: "$sensors.k" },
-              value: { $max: "$numericValue" },
-              count: { $sum: 1 }
-            }
+          $group: {
+            _id: {
+              date: "$date",
+              sensorName: "$sensors.k"
+            },
+            date: { $first: "$date" },
+            sensorName: { $first: "$sensors.k" },
+            value: { $max: "$numericValue" },
+            count: { $sum: 1 }
           }
+        }
         : {
-            $group: {
-              _id: {
-                date: "$date",
-                sensorName: "$sensors.k"
-              },
-              date: { $first: "$date" },
-              sensorName: { $first: "$sensors.k" },
-              value: { $min: "$numericValue" },
-              count: { $sum: 1 }
-            }
-          };
+          $group: {
+            _id: {
+              date: "$date",
+              sensorName: "$sensors.k"
+            },
+            date: { $first: "$date" },
+            sensorName: { $first: "$sensors.k" },
+            value: { $min: "$numericValue" },
+            count: { $sum: 1 }
+          }
+        };
 
       // Combine all stages
       const pipeline = [
@@ -1889,7 +1904,7 @@ v
         // Sort by date
         { $sort: { date: 1 } }
       ];
-      
+
       // First, check if we have any matching documents
       const count = await sensormodel.countDocuments({
         waveguide: waveguide,
@@ -1898,23 +1913,23 @@ v
           $lte: new Date(end).toISOString()
         }
       });
-      
-      
-      
+
+
+
       if (count === 0) {
         // Try to find any data to debug the date format
         const sampleDoc = await sensormodel.findOne({ waveguide: waveguide });
-      
+
       }
 
       // Execute the main aggregation pipeline for daily data
       let dailyData = [];
       let topValues = [];
-      
+
       try {
         // Get daily data
         dailyData = await sensormodel.aggregate(pipeline);
-        
+
         // Create a separate pipeline for top 8 values
         const topValuesPipeline = [
           ...baseStages,
@@ -1950,10 +1965,10 @@ v
             }
           }
         ];
-        
+
         // Get top 8 values
         topValues = await sensormodel.aggregate(topValuesPipeline);
-     
+
       } catch (error) {
         console.error('Aggregation error:', error);
         throw error;
@@ -1972,7 +1987,7 @@ v
     }
     catch (error) {
       console.error('Error in heatmapData:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while generating the heatmap data',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -1983,7 +1998,7 @@ v
   async getallsensorNoLimit(req, res) {
     try {
       console.log('Fetching all sensor data...');
-      
+
       // Fetch all documents from the database
       const allDocuments = await sensormodel
         .find({})  // Empty query object to match all documents
@@ -1991,9 +2006,9 @@ v
         .sort({
           updatedAt: -1
         });
-      
+
       console.log(`Fetched ${allDocuments.length} documents`);
-      
+
       // Return all documents
       res.status(200).json({
         success: true,
@@ -2002,7 +2017,7 @@ v
       });
     } catch (error) {
       console.error('Error in getallsensor:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'An error occurred while fetching sensor data',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -2033,7 +2048,7 @@ v
 
       const userId = 'XY001'; // Default user ID
       const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
-      
+
       // Calculate time range based on interval
       const timeRange = this._calculateTimeRange(interval);
       const startTime = timeRange.startTime;
@@ -2081,8 +2096,181 @@ v
       });
     }
   }
+
+  async getCollectorbar(req, res) {
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      const { sensorId, sides: side, interval } = req.query;
+  
+      // Validate required parameters
+      if (!sensorId || !side || !interval) {
+        return res.status(400).json({
+          error: 'Missing required parameters: sensorId, side, and interval are required'
+        });
+      }
+  
+      // Validate side parameter
+      const validSides = ['Aside', 'Bside'];
+      if (!validSides.includes(side)) {
+        return res.status(400).json({
+          error: 'Invalid side parameter. Must be "Aside" or "Bside"'
+        });
+      }
+  
+      // Validate sensorId format (sensor1 to sensor38)
+      const sensorNum = parseInt(sensorId.replace('sensor', ''));
+      if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
+        return res.status(400).json({
+          error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
+        });
+      }
+  
+      // Calculate time range based on interval
+      let timeRange = new Date();
+      let maxDataPoints = 1000;
+  
+      switch (interval) {
+        case '30Min':
+          timeRange.setMinutes(timeRange.getMinutes() - 30);
+          maxDataPoints = 300;
+          break;
+        case '1H':
+          timeRange.setHours(timeRange.getHours() - 1);
+          maxDataPoints = 600;
+          break;
+        case '12H':
+          timeRange.setHours(timeRange.getHours() - 12);
+          maxDataPoints = 720;
+          break;
+        case '1D':
+          timeRange.setDate(timeRange.getDate() - 1);
+          maxDataPoints = 480;
+          break;
+        case '1W':
+          timeRange.setDate(timeRange.getDate() - 7);
+          maxDataPoints = 336;
+          break;
+        case '1M':
+          timeRange.setMonth(timeRange.getMonth() - 1);
+          maxDataPoints = 360;
+          break;
+        case '6M':
+          timeRange.setMonth(timeRange.getMonth() - 6);
+          maxDataPoints = 180;
+          break;
+        default:
+          return res.status(400).json({
+            error: 'Invalid interval. Valid values are: 30Min, 1H, 12H, 1D, 1W, 1M, 6M'
+          });
+      }
+  
+      // Map side to waveguide
+      const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
+  
+      // Validate user ID
+      if (!id) {
+        return res.status(400).json({
+          error: 'User ID is required in headers (X-User-ID or x-user-id)'
+        });
+      }
+
+      // Build the query with user ID filter
+      const query = {
+        id,
+        waveguide,
+        createdAt: { $gte: timeRange }
+      };
+  
+      // Check total count
+      const totalCount = await sensormodel.countDocuments(query);
+  
+      let sensorData;
+  
+      // For larger datasets, use sampling
+      if (totalCount > maxDataPoints) {
+        // Use aggregation to sample data
+        const pipeline = [
+          { $match: {
+            id: id,
+            waveguide: waveguide,
+            createdAt: { $gte: timeRange }
+          }},
+          { $sort: { createdAt: 1 } },
+          { 
+            $group: {
+              _id: null,
+              docs: { $push: "$$ROOT" },
+              total: { $sum: 1 }
+            }
+          },
+          {
+            $project: {
+              sampledDocs: {
+                $map: {
+                  input: { $range: [0, { $min: [maxDataPoints, "$total"] }] },
+                  as: "idx",
+                  in: {
+                    $arrayElemAt: [
+                      "$docs",
+                      {
+                        $floor: {
+                          $multiply: [
+                            "$$idx",
+                            { $divide: ["$total", maxDataPoints] }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          { $unwind: "$sampledDocs" },
+          { $replaceRoot: { newRoot: "$sampledDocs" } },
+          { $sort: { createdAt: 1 } }
+        ];
+  
+        sensorData = await sensormodel.aggregate(pipeline);
+      } else {
+        // For smaller datasets, fetch normally
+        sensorData = await sensormodel.find(query)
+          .sort({ createdAt: 1 })
+          .lean();
+      }
+  
+      if (!sensorData || sensorData.length === 0) {
+        return res.status(404).json({
+          message: 'No data found for the given parameters'
+        });
+      }
+  
+      const result = {
+        sensorId,
+        side,
+        interval,
+        dataPoints: sensorData.length,
+        totalAvailable: totalCount,
+        data: sensorData.map((entry) => {
+          const sensorValue = entry[sensorId];
+  
+          return {
+            timestamp: entry.createdAt,
+            value: sensorValue !== undefined && sensorValue !== null ? Number(sensorValue) : null
+          };
+        }).filter(item => item.value !== null) // Remove entries with null values
+      };
+  
+      res.json(result);
+  
+    } catch (error) {
+      console.error('Error in getCollectorbar:', error);
+      res.status(500).json({
+        error: 'An error occurred while fetching sensor data',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
 }
-
 export const apiController = new ApiController();
-
-

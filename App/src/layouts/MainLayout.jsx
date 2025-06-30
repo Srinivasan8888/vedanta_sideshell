@@ -53,8 +53,8 @@ const MainLayout = () => {
         <div className="absolute inset-0 bg-white/50" />
       </div>
       
-      {/* Navbar - fixed at top (hide only on settings page for superadmin) */}
-      {!isSettingsPage || userRole !== 'superadmin' ? (
+      {/* Navbar - fixed at top (hide for admin and superadmin) */}
+      {!['admin', 'superadmin'].includes(userRole) ? (
         <div className="flex-shrink-0 z-20">
           <Navbar onLogout={handleLogout} socketRef={socketRef} />
         </div>
