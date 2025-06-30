@@ -436,20 +436,59 @@ v
       }
 
       // 1. Get real-time sensor data (from getallsensor)
-      const latestWG1 = await sensormodel
-        .findOne({ id, waveguide: 'WG1' })
-        .sort({ updatedAt: -1 })
-        .lean();
+      const [latestWG1, previousWG1] = await Promise.all([
+        sensormodel.findOne({ id, waveguide: 'WG1' }).sort({ updatedAt: -1 }).lean(),
+        sensormodel.find({ id, waveguide: 'WG1' }).sort({ updatedAt: -1 }).skip(1).limit(1).lean()
+      ]);
 
-      const latestWG2 = await sensormodel
-        .findOne({ id, waveguide: 'WG2' })
-        .sort({ updatedAt: -1 })
-        .lean();
+      const [latestWG2, previousWG2] = await Promise.all([
+        sensormodel.findOne({ id, waveguide: 'WG2' }).sort({ updatedAt: -1 }).lean(),
+        sensormodel.find({ id, waveguide: 'WG2' }).sort({ updatedAt: -1 }).skip(1).limit(1).lean()
+      ]);
 
-      const realtimeData = [latestWG1, latestWG2]
-        .filter(Boolean)
-        .map(wg => filterNullValues(wg))
-        .filter(Boolean);
+      // Function to calculate differences between current and previous readings
+      const calculateDifferences = (current, previous) => {
+        if (!current) return null;
+        
+        const result = { ...current };
+        result.sensors = {};
+        
+        // Process each sensor
+        for (let i = 1; i <= 38; i++) {
+          const sensorKey = `sensor${i}`;
+          const sensorValue = current[sensorKey];
+          
+          if (sensorValue === undefined) continue;
+          
+          const sensorData = {
+            value: sensorValue
+          };
+          
+          // Add difference and trend if previous data exists
+          if (previous && previous[0] && previous[0][sensorKey] !== undefined) {
+            const currentVal = parseFloat(sensorValue);
+            const prevVal = parseFloat(previous[0][sensorKey]);
+            
+            if (!isNaN(currentVal) && !isNaN(prevVal)) {
+              const diff = currentVal - prevVal;
+              sensorData.difference = Math.abs(diff).toFixed(2);
+              sensorData.trend = diff >= 0 ? 'up' : 'down';
+            }
+          }
+          
+          result.sensors[sensorKey] = sensorData;
+          // Remove the original flat sensor key
+          delete result[sensorKey];
+        }
+        
+        return result;
+      };
+
+      // Process both waveguides with their differences
+      const realtimeData = [
+        latestWG1 ? calculateDifferences(latestWG1, previousWG1) : null,
+        latestWG2 ? calculateDifferences(latestWG2, previousWG2) : null
+      ].filter(Boolean);
 
       // 2. Get historical data (from getDashboardchart)
       const timeRange = this._calculateTimeRange(interval);
@@ -539,8 +578,20 @@ v
           },
           realtime: realtimeData,
           historical: {
-            ASide: historicalWG1,
-            BSide: historicalWG2
+            ASide: historicalWG1?.sensorData?.map(item => item.dataPoints)?.flat() || [],
+            BSide: historicalWG2?.sensorData?.map(item => item.dataPoints)?.flat() || []
+          },
+          temperatureStats: {
+            ASide: historicalWG1?.stats?.ASide ? {
+              maxTemp: `${historicalWG1.stats.ASide.maxTemp}°C`,
+              minTemp: `${historicalWG1.stats.ASide.minTemp}°C`,
+              avgTemp: `${historicalWG1.stats.ASide.avgTemp}°C`
+            } : null,
+            BSide: historicalWG2?.stats?.BSide ? {
+              maxTemp: `${historicalWG2.stats.BSide.maxTemp}°C`,
+              minTemp: `${historicalWG2.stats.BSide.minTemp}°C`,
+              avgTemp: `${historicalWG2.stats.BSide.avgTemp}°C`
+            } : null
           },
           hourlyAverages: tableData
         },

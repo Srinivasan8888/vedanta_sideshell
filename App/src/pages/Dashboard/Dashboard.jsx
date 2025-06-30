@@ -40,7 +40,7 @@ const Loader = () => (
   </div>
 );
 
-const SensorCard = ({ sensor }) => (
+const SensorCard = React.memo(({ sensor }) => (
   <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
     <button className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded">
       <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -64,7 +64,13 @@ const SensorCard = ({ sensor }) => (
       </div>
     </div>
   </div>
-);
+), (prevProps, nextProps) => {
+  // Only re-render if sensor data changes
+  return prevProps.sensor.value === nextProps.sensor.value &&
+         prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
+         prevProps.sensor.difference === nextProps.sensor.difference &&
+         prevProps.sensor.name === nextProps.sensor.name;
+});
 
 const SensorRow = ({ sensors, waveguide, rowType }) => {
   const filteredSensors = sensors
@@ -88,29 +94,121 @@ const SensorRow = ({ sensors, waveguide, rowType }) => {
 
 const Dashboard = () => {
   const [timeInterval, setTimeInterval] = useState('Live');
+  const [selectedSide, setSelectedSide] = useState('ASide');
+  const [historicalData, setHistoricalData] = useState({ ASide: { sensorData: [] }, BSide: { sensorData: [] } });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [previousSensorData, setPreviousSensorData] = useState({});
+  const intervalRef = useRef();
 
-  const handleTimeIntervalChange = (interval) => {
+
+  const handleTimeIntervalChange = async (interval) => {
+    if (interval === timeInterval) return; // Don't do anything if the interval hasn't changed
+    
     setTimeInterval(interval);
-    // Here you would typically fetch new data based on the selected interval
-    console.log(`Time interval changed to: ${interval}`);
-    // Update your chart data based on the selected interval
+    
+    try {
+      // Fetch new data with the updated interval
+      await fetchSensorData();
+    } catch (error) {
+      console.error('Error fetching data for interval:', interval, error);
+      // Error is already handled in fetchSensorData
+    }
   };
+
+  const handleSideChange = (side) => {
+    setSelectedSide(side);
+    // Force chart update by toggling the state
+    setChartUpdateKey(prev => prev + 1);
+  };
+
+  // Process historical data for the chart
+  const processChartData = useCallback(() => {
+    const aSideData = historicalData.ASide?.sensorData || [];
+    const bSideData = historicalData.BSide?.sensorData || [];
+    
+    // Initialize arrays for both sides
+    const aSideHourlyData = Array(24).fill(null);
+    const bSideHourlyData = Array(24).fill(null);
+    
+    // Process ASide data
+    aSideData.forEach(entry => {
+      if (entry && entry.dataPoints && entry.dataPoints.length > 0) {
+        const latestPoint = entry.dataPoints[entry.dataPoints.length - 1];
+        if (latestPoint && latestPoint.timestamp) {
+          const date = new Date(latestPoint.timestamp);
+          const hour = date.getHours();
+          
+          // Calculate average temperature from all sensors
+          const sensors = latestPoint.sensors || {};
+          const sensorValues = Object.values(sensors).filter(val => typeof val === 'number');
+          const avgTemp = sensorValues.length > 0 
+            ? sensorValues.reduce((sum, val) => sum + val, 0) / sensorValues.length 
+            : null;
+            
+          if (avgTemp !== null) {
+            aSideHourlyData[hour] = parseFloat(avgTemp.toFixed(2));
+          }
+        }
+      }
+    });
+
+    // Process BSide data
+    bSideData.forEach(entry => {
+      if (entry && entry.dataPoints && entry.dataPoints.length > 0) {
+        const latestPoint = entry.dataPoints[entry.dataPoints.length - 1];
+        if (latestPoint && latestPoint.timestamp) {
+          const date = new Date(latestPoint.timestamp);
+          const hour = date.getHours();
+          
+          // Calculate average temperature from all sensors
+          const sensors = latestPoint.sensors || {};
+          const sensorValues = Object.values(sensors).filter(val => typeof val === 'number');
+          const avgTemp = sensorValues.length > 0 
+            ? sensorValues.reduce((sum, val) => sum + val, 0) / sensorValues.length 
+            : null;
+            
+          if (avgTemp !== null) {
+            bSideHourlyData[hour] = parseFloat(avgTemp.toFixed(2));
+          }
+        }
+      }
+    });
+
+    return {
+      labels: Array.from({ length: 24 }, (_, i) => {
+        const date = new Date();
+        date.setHours(i, 0, 0, 0);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', hour12: true });
+      }),
+      aSideData: aSideHourlyData,
+      bSideData: bSideHourlyData
+    };
+  }, [historicalData]);
+
+  const chartData = processChartData();
   const [sensors, setSensors] = useState([]);
+  const [hourlyAverages, setHourlyAverages] = useState(Array(24).fill().map((_, i) => ({
+    index: i + 1,
+    time: new Date(0, 0, 0, i).toLocaleTimeString('en-US', { hour: '2-digit', hour12: true }),
+    entries: []
+  })));
   const [scrollPosition, setScrollPosition] = useState(0);
+  const [chartUpdateKey, setChartUpdateKey] = useState(0); // Add this line
   const scrollContainerRef = React.useRef(null);
   const scrollAmount = 200; // Adjust this value to control scroll distance
-  
+
   // Memoize filtered sensor arrays
-  const wg1Sensors = React.useMemo(() => 
-    sensors.filter(sensor => sensor.waveguide === 'WG1'), 
+  const wg1Sensors = React.useMemo(() =>
+    sensors.filter(sensor => sensor.waveguide === 'WG1'),
     [sensors]
   );
-  
-  const wg2Sensors = React.useMemo(() => 
-    sensors.filter(sensor => sensor.waveguide === 'WG2'), 
+
+  const wg2Sensors = React.useMemo(() =>
+    sensors.filter(sensor => sensor.waveguide === 'WG2'),
     [sensors]
   );
-  
+
   // Throttle scroll position updates
   const handleScroll = React.useCallback((e) => {
     setScrollPosition(e.target.scrollLeft);
@@ -134,127 +232,116 @@ const Dashboard = () => {
     }
   }, [scrollAmount]);
 
-  const [previousSensorData, setPreviousSensorData] = useState({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const intervalRef = useRef();
+
 
   const fetchSensorData = useCallback(async () => {
+    // This function is now only responsible for the API call and data transformation.
     try {
-      setIsLoading(true);
-      console.log('Fetching sensor data...');
-      const response = await API.get(`api/v2/getallsensor`);
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-      
-      // Handle different response types
-      let apiData;
-      if (typeof response.data === 'string') {
-        try {
-          apiData = JSON.parse(response.data);
-        } catch (e) {
-          console.error('Failed to parse response data as JSON:', response.data);
-          throw new Error('Invalid JSON response from server');
+      const response = await API.get(`/api/v2/getDashboardAPi?interval=${timeInterval}`, {
+        timeout: 10000, // 10 second timeout
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
-      } else {
-        apiData = response.data;
+      });
+
+      if (!response.data || !response.data.data) {
+        throw new Error('Invalid response format from server');
       }
 
-      console.log('API Response data:', apiData); // Log the parsed API response
-
-      // Transform API data to match the expected sensor format
+      const { realtime, hourlyAverages } = response.data.data;
+      
+      if (hourlyAverages && Array.isArray(hourlyAverages)) {
+        setHourlyAverages(hourlyAverages);
+      }
+      
       const formattedSensors = [];
-      const newPreviousData = {};
-
-      // Check if apiData is an array or object and handle accordingly
-      const dataArray = Array.isArray(apiData) ? apiData : [apiData];
-
-      let hasValidSensors = false;
-
-      dataArray.forEach((waveguide) => {
-        if (!waveguide || typeof waveguide !== 'object') return;
-
-        // Extract sensor values from the waveguide data
-        Object.entries(waveguide).forEach(([key, value]) => {
-          // Check if the key is a sensor field (starts with 'sensor' or any other pattern in your data)
-          if ((key.startsWith('sensor') || key.startsWith('temp') || key.startsWith('value'))
-            && value !== null && value !== undefined) {
-
-            const sensorNumber = key.replace(/[^0-9]/g, '') || '1'; // Extract numbers or default to '1'
-            const sensorId = waveguide.waveguide ?
-              `${waveguide.waveguide}+${sensorNumber}` :
-              `sensor-${sensorNumber}`;
-
-            const currentValue = parseFloat(value);
-
-            if (isNaN(currentValue)) return; // Skip invalid numbers
-
-            hasValidSensors = true;
-
-            // Store current value for next comparison
-            newPreviousData[sensorId] = {
-              value: currentValue,
-              timestamp: waveguide.TIME || waveguide.timestamp || new Date().toISOString()
-            };
-
-            // Calculate difference from previous reading using functional update
-            setPreviousSensorData(prevData => {
-              const prevValue = prevData[sensorId]?.value || currentValue;
-              const difference = currentValue - prevValue;
-              const isPositive = difference >= 0;
-
-              const sidePrefix = waveguide.waveguide === 'WG1' ? 'ASide' : 'BSide';
-              formattedSensors.push({
-                id: sensorId,
-                name: `${sidePrefix} Sensor ${sensorNumber}`,
-                value: currentValue.toFixed(2),
-                difference: Math.abs(difference).toFixed(2),
-                isPositive,
-                waveguide: waveguide.waveguide || 'WG',
-                timestamp: waveguide.TIME || waveguide.timestamp || new Date().toISOString()
-              });
-
-              return prevData;
-            });
-          }
+      realtime.forEach(waveguide => {
+        if (!waveguide || !waveguide.sensors) return;
+        Object.entries(waveguide.sensors).forEach(([sensorKey, sensorData]) => {
+          if (!sensorData || sensorData.value === undefined) return;
+          const sensorNumber = sensorKey.replace('sensor', '');
+          const sidePrefix = waveguide.waveguide === 'WG1' ? 'ASide' : 'BSide';
+          const sensorId = `${waveguide.waveguide}+${sensorNumber}`;
+          formattedSensors.push({
+            id: sensorId,
+            name: `${sidePrefix} Sensor ${sensorNumber}`,
+            value: parseFloat(sensorData.value).toFixed(2),
+            difference: sensorData.difference || '0.00',
+            isPositive: sensorData.trend === 'up',
+            waveguide: waveguide.waveguide,
+            timestamp: waveguide.TIME || new Date().toISOString()
+          });
         });
       });
 
-      if (!hasValidSensors) {
-        console.error('No valid sensor data found in response. Full response:', apiData);
-        throw new Error('No valid sensor data found in the response');
+      if (formattedSensors.length === 0) {
+        console.warn('No valid sensor data found in response, but the request was successful.');
       }
-
-      // Update previous sensor data for next comparison
-      setPreviousSensorData(prev => ({
-        ...prev,
-        ...newPreviousData
-      }));
 
       setSensors(formattedSensors);
-      setError(null);
+
     } catch (error) {
-      console.error('Error fetching sensor data:', error);
-      setError(error.message);
-    } finally {
-      setIsLoading(false);
+      // Log the error and re-throw it for the polling logic to handle.
+      console.error('Error during sensor data fetch:', error.message);
+      throw error;
     }
-  }, []); // Removed previousSensorData from dependencies
+  }, [timeInterval]);
 
+  // This effect handles the data fetching, retries, and polling logic.
   useEffect(() => {
-    // Initial fetch
-    fetchSensorData();
+    let isMounted = true;
+    let timeoutId;
+    console.log('Polling effect initiated.');
 
-    // Set up polling every 5 seconds
-    intervalRef.current = setInterval(fetchSensorData, 5000);
-
-    // Clean up interval on component unmount or when fetchSensorData changes
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    const poll = async () => {
+      if (!isMounted) {
+        console.log('Polling stopped: Component unmounted or dependency changed.');
+        return;
       }
+
+      console.log('Starting new poll cycle.');
+      setIsLoading(true);
+      let success = false;
+
+      for (let i = 0; i < 4; i++) { // 1 initial attempt + 3 retries
+        if (!isMounted) break;
+        try {
+          console.log(`Fetch attempt #${i + 1}...`);
+          await fetchSensorData();
+          console.log(`Fetch attempt #${i + 1} was successful.`);
+          success = true;
+          break; 
+        } catch (error) {
+          console.error(`Fetch attempt #${i + 1} failed.`);
+          if (i < 3) {
+            const delay = 1000 * Math.pow(2, i);
+            console.log(`Retrying in ${delay / 1000}s...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            console.error('All fetch attempts failed. Setting error state.');
+            if (isMounted) setError(error.message || 'Failed to fetch data after multiple retries.');
+          }
+        }
+      }
+      
+      if (isMounted) {
+        console.log('Poll cycle finished.');
+        if (success) {
+          setError(null);
+        }
+        setIsLoading(false);
+        console.log('Scheduling next poll in 5s.');
+        timeoutId = setTimeout(poll, 5000);
+      }
+    };
+
+    poll();
+
+    return () => {
+      console.log('Cleaning up polling effect.');
+      isMounted = false;
+      clearTimeout(timeoutId);
     };
   }, [fetchSensorData]);
 
@@ -305,17 +392,17 @@ const Dashboard = () => {
                       </div>
                     ) : sensors.length > 0 ? (
                       <div className="w-full ">
-                       
-                        <WaveguideSection 
+
+                        <WaveguideSection
                           sensors={wg1Sensors}
-                          className="wg1-section"                         
+                          className="wg1-section"
                           scrollLeft={scrollLeft}
                           scrollRight={scrollRight}
                           scrollPosition={scrollPosition}
                           scrollAmount={scrollAmount}
                         />
                         {/* WG2 Section */}
-                        <WaveguideSection 
+                        <WaveguideSection
                           sensors={wg2Sensors}
                           className="wg2-section"
                           scrollLeft={scrollLeft}
@@ -415,62 +502,74 @@ const Dashboard = () => {
         <div className="order-3 flex flex-col xl:flex-row items-stretch rounded-2xl xl:order-3 shadow-md p-4 gap-4 bg-white/30 backdrop-blur-sm border border-gray-100 overflow-hidden">
           <div className="w-full   rounded-xl overflow-hidden">
             <div className="overflow-x-auto h-96 md:h-full overflow-y-auto scrollbar-custom">
-              <table className="min-w-full  divide-y divide-gray-200">
+              <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50/50">
                   <tr>
-                    <th rowSpan="2" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">#</th>
-                    <th rowSpan="2" className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                    <th colSpan="3" className="text-center text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temperature Data</th>
+                    <th rowSpan="2" className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">#</th>
+                    <th rowSpan="2" className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Time</th>
+                    <th colSpan="3" className="text-center text-sm font-medium text-gray-500 uppercase">Temperature Data</th>
                   </tr>
                   <tr>
-                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Side</th>
-                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Temp (°C)</th>
-                    <th className="lg:px-2 2xl:px-4 py-2 text-left text-xs lg:font-regular 2xl:font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Side</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Temp (°C)</th>
+                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-gray-200">
-                  {Array.from({ length: 24 }).map((_, index) => {
-                    const time = new Date();
-                    time.setHours(index, 0, 0, 0);
-                    const timeString = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-                    
-                    // Static temperature values
-                    const aSideTemp = '--';
-                    const bSideTemp = '--';
+                  {hourlyAverages?.filter(hourData => 
+                    hourData?.entries?.length > 0
+                  ).map((hourData, index) => {
+                    const getStatusClass = (temp) => {
+                      if (temp > 35) return 'bg-red-100 text-red-800';
+                      if (temp < 25) return 'bg-blue-100 text-blue-800';
+                      return 'bg-green-100 text-green-800';
+                    };
 
-                    // Status for placeholder
-                    const placeholderStatus = { class: 'bg-gray-100 text-gray-800', text: '--' };
+                    const getStatusText = (temp) => {
+                      if (temp > 35) return 'High';
+                      if (temp < 25) return 'Low';
+                      return 'Normal';
+                    };
+
+                    const getSideData = (side) => {
+                      const entry = hourData.entries.find(e => e.side === side);
+                      if (!entry) return { temp: '--', status: { class: 'bg-gray-100 text-gray-800', text: '--' } };
+                      
+                      return {
+                        temp: typeof entry.temp === 'number' ? entry.temp.toFixed(1) : '--',
+                        status: {
+                          class: getStatusClass(entry.temp),
+                          text: getStatusText(entry.temp)
+                        }
+                      };
+                    };
+
+                    const aSide = getSideData('ASide');
+                    const bSide = getSideData('BSide');
 
                     return (
-                      <React.Fragment key={index}>
-                        {/* A Side Row */}
-                        <tr className="hover:bg-gray-50/50 transition-colors">
-                          {index === 0 || index % 1 === 0 ? (
-                            <>
-                              <td rowSpan="2" className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
-                                {index + 1}
-                              </td>
-                              <td rowSpan="2" className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-900 border-r border-gray-200">
-                                {timeString}
-                              </td>
-                            </>
-                          ) : null}
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">ASide</td>
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">{aSideTemp}°C</td>
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${placeholderStatus.class}`}>
-                              {placeholderStatus.text}
+                      <React.Fragment key={`${hourData.index}-${index}`}>
+                        <tr className="hover:bg-gray-50/50">
+                          <td rowSpan="2" className="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">
+                            {index + 1}
+                          </td>
+                          <td rowSpan="2" className="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">
+                            {hourData.time || '--'}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-gray-700">ASide</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{aSide.temp}°C</td>
+                          <td className="px-4 py-2">
+                            <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${aSide.status.class}`}>
+                              {aSide.status.text}
                             </span>
                           </td>
                         </tr>
-                        
-                        {/* B Side Row */}
-                        <tr className="hover:bg-gray-50/50 transition-colors border-b border-gray-200">
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">BSide</td>
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap text-sm text-gray-400">{bSideTemp}°C</td>
-                          <td className="lg:px-2 2xl:px-4 py-2 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${placeholderStatus.class}`}>
-                              {placeholderStatus.text}
+                        <tr className="hover:bg-gray-50/50 border-b border-gray-200">
+                          <td className="px-4 py-2 text-sm text-gray-700">BSide</td>
+                          <td className="px-4 py-2 text-sm text-gray-700">{bSide.temp}°C</td>
+                          <td className="px-4 py-2">
+                            <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${bSide.status.class}`}>
+                              {bSide.status.text}
                             </span>
                           </td>
                         </tr>
@@ -623,7 +722,8 @@ const Dashboard = () => {
                       type="radio"
                       name="side"
                       value="ASide"
-                      checked={true}
+                      checked={selectedSide === 'ASide'}
+                      onChange={() => handleSideChange('ASide')}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <span className="ml-2 text-sm text-gray-700">A Side</span>
@@ -633,6 +733,8 @@ const Dashboard = () => {
                       type="radio"
                       name="side"
                       value="BSide"
+                      checked={selectedSide === 'BSide'}
+                      onChange={() => handleSideChange('BSide')}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                     />
                     <span className="ml-2 text-sm text-gray-700">B Side</span>
@@ -640,7 +742,7 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
-                {['Live', '1H', '2H', '5H', '7H', '12H'].map((interval) => (
+                {['Live', '1h', '2h', '5h', '7h', '12h'].map((interval) => (
                   <button
                     key={interval}
                     className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 border
@@ -660,26 +762,31 @@ const Dashboard = () => {
             <div className="relative h-[calc(100%-50px)] bg-white/50 rounded-lg p-3 border border-gray-100">
               <Line
                 data={{
-                  labels: Array.from({ length: 24 }, (_, i) => {
-                    const date = new Date();
-                    date.setHours(i, 0, 0, 0);
-                    return date.toLocaleTimeString('en-US', { hour: '2-digit', hour12: true });
-                  }),
-                  datasets: [{
-                    label: 'Temperature',
-                    data: Array(24).fill(0),
-                    borderColor: 'rgb(79, 70, 229)',
-                    backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                    tension: 0.3,
-                    fill: true,
-                    pointBackgroundColor: 'white',
-                    pointBorderColor: 'rgb(79, 70, 229)',
-                    pointHoverRadius: 6,
-                    pointHoverBackgroundColor: 'white',
-                    pointHoverBorderColor: 'rgb(99, 102, 241)',
-                    pointHoverBorderWidth: 2,
-                    pointHitRadius: 10,
-                  }]
+                  labels: chartData.labels,
+                  datasets: sensors
+                    .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                    .map((sensor, index) => ({
+                      label: sensor.name,
+                      data: Array(24).fill(null).map((_, hour) => {
+                        // For demo purposes, we'll use a simple calculation
+                        // In a real app, you would use the actual historical data for each sensor
+                        const baseTemp = parseFloat(sensor.value) || 25;
+                        return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
+                      }),
+                      borderColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                      backgroundColor: `hsla(${(index * 137.5) % 360}, 70%, 50%, 0.1)`,
+                      tension: 0.3,
+                      pointBackgroundColor: 'white',
+                      pointBorderColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                      pointHoverRadius: 6,
+                      pointHoverBackgroundColor: 'white',
+                      pointHoverBorderColor: `hsl(${(index * 137.5) % 360}, 70%, 60%)`,
+                      pointHoverBorderWidth: 2,
+                      pointHitRadius: 10,
+                      borderWidth: 1.5,
+                      borderDash: [],
+                      opacity: 0.9
+                    }))
                 }}
                 options={{
                   responsive: true,
@@ -713,7 +820,7 @@ const Dashboard = () => {
                       displayColors: false,
                       callbacks: {
                         label: function (context) {
-                          return `  ${context.parsed.y}°C`;
+                          return `  ${context.dataset.label}: ${context.parsed.y}°C`;
                         },
                         title: function (context) {
                           const date = new Date();
@@ -723,6 +830,9 @@ const Dashboard = () => {
                             minute: '2-digit',
                             hour12: true
                           });
+                        },
+                        labelTextColor: function(context) {
+                          return context.datasetIndex === 0 ? 'rgb(79, 70, 229)' : 'rgb(220, 38, 38)';
                         }
                       }
                     }
@@ -804,13 +914,19 @@ const Dashboard = () => {
                 }}
               />
 
-              {/* Current Value Indicator - Moved to top left to avoid legend overlap */}
-              <div className="absolute top-2 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                <div className="flex items-center text-sm font-medium text-gray-400">
-                  <span className="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
-                  Current: --°C
+              {/* Current Value Indicator */}
+              {/* <div className="absolute top-2 left-4 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                <div className="flex items-center text-sm font-medium text-gray-700">
+                  <span 
+                    className={`w-2 h-2 rounded-full mr-2 ${
+                      isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
+                    }`}
+                  ></span>
+                  {isLoading ? 'Loading...' : error ? 'Error loading data' : 
+                    `Current: ${chartData.data[new Date().getHours()] || '--'}°C`
+                    }
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -821,16 +937,23 @@ const Dashboard = () => {
 };
 
 // Helper component for waveguide sections
-const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
-  const [scrollPosition, setScrollPosition] = useState(0);
+const WaveguideSection = React.memo(({ 
+  sensors = [], 
+  className = "", 
+  title = "", 
+  scrollLeft, 
+  scrollRight, 
+  scrollPosition, 
+  scrollAmount 
+}) => {
+  const [localScrollPosition, setLocalScrollPosition] = useState(0);
   const scrollContainerRef = useRef(null);
-  const scrollAmount = 200;
 
   const handleScroll = useCallback((e) => {
-    setScrollPosition(e.target.scrollLeft);
+    setLocalScrollPosition(e.target.scrollLeft);
   }, []);
 
-  const scrollLeft = useCallback(() => {
+  const handleScrollLeft = useCallback(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({
         left: -scrollAmount,
@@ -839,7 +962,7 @@ const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
     }
   }, [scrollAmount]);
 
-  const scrollRight = useCallback(() => {
+  const handleScrollRight = useCallback(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
@@ -855,16 +978,16 @@ const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
       <h3 className="text-lg font-semibold mb-4 text-[#1e2c74]">{title}</h3>
       <div className="relative">
         <button
-          onClick={scrollLeft}
-          className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          onClick={handleScrollLeft}
+          className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${localScrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           aria-label={`Scroll ${title} left`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
           </svg>
         </button>
-        
-        <div 
+
+        <div
           ref={scrollContainerRef}
           className="overflow-x-auto scrollbar-custom"
           onScroll={handleScroll}
@@ -872,8 +995,8 @@ const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
         >
           <div className="grid auto-rows-auto grid-flow-col auto-cols-max gap-2 w-max">
             {sensors.map((sensor, i) => (
-              <div 
-                key={sensor.id} 
+              <div
+                key={sensor.id}
                 className="w-40"
                 style={{ gridRow: i % 2 === 0 ? 1 : 2 }}
               >
@@ -882,10 +1005,10 @@ const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
             ))}
           </div>
         </div>
-        
+
         <button
-          onClick={scrollRight}
-          className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && scrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          onClick={handleScrollRight}
+          className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && localScrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           aria-label={`Scroll ${title} right`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
@@ -896,9 +1019,22 @@ const WaveguideSection = React.memo(({ sensors, className = "", title }) => {
     </section>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if sensors array reference changes
-  return prevProps.sensors === nextProps.sensors && 
-         prevProps.className === nextProps.className;
+  // Deep compare sensors array and other props
+  const sensorsEqual = prevProps.sensors === nextProps.sensors || (
+    Array.isArray(prevProps.sensors) &&
+    Array.isArray(nextProps.sensors) &&
+    prevProps.sensors.length === nextProps.sensors.length &&
+    prevProps.sensors.every((sensor, i) => 
+      sensor.id === nextProps.sensors[i]?.id &&
+      sensor.value === nextProps.sensors[i]?.value
+    )
+  );
+  
+  return sensorsEqual &&
+    prevProps.className === nextProps.className &&
+    prevProps.title === nextProps.title &&
+    prevProps.scrollPosition === nextProps.scrollPosition &&
+    prevProps.scrollAmount === nextProps.scrollAmount;
 });
 
 // Memoize the sensor card to prevent unnecessary re-renders
