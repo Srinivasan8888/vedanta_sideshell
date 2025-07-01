@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useRef, useCallback } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useRef, useCallback, useMemo } from 'react';
 import { FaArrowUp, FaArrowDown } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import '../../Assets/Navbar/Sidebar.css';
@@ -44,20 +44,20 @@ const Loader = () => (
 const SensorCard = React.memo(
   function SensorCard({ sensor }) {
     const navigate = useNavigate();
-    
+
     const handleNavigate = () => {
       // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
       const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
       const sensorId = sensorNumber ? `sensor${sensorNumber}` : 'sensor1';
       const side = sensor.name.includes('A') ? 'Aside' : 'Bside';
-      
+
       // Navigate to CollectorBar with sensorId and side as query parameters
       navigate(`/CollectorBar?sensorId=${sensorNumber}&side=${side}`);
     };
-    
+
     return (
       <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
-        <button 
+        <button
           onClick={handleNavigate}
           className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded"
           aria-label="View sensor details"
@@ -88,9 +88,9 @@ const SensorCard = React.memo(
   (prevProps, nextProps) => {
     // Only re-render if sensor data changes
     return prevProps.sensor.value === nextProps.sensor.value &&
-           prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
-           prevProps.sensor.difference === nextProps.sensor.difference &&
-           prevProps.sensor.name === nextProps.sensor.name;
+      prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
+      prevProps.sensor.difference === nextProps.sensor.difference &&
+      prevProps.sensor.name === nextProps.sensor.name;
   }
 );
 
@@ -119,10 +119,10 @@ const Dashboard = () => {
   const [hiddenSensors, setHiddenSensors] = useState({}); // Track hidden sensors by ID
   const [timeInterval, setTimeInterval] = useState('Live');
   const [selectedSide, setSelectedSide] = useState('ASide');
-  const [historicalData, setHistoricalData] = useState({ ASide: { sensorData: [] }, BSide: { sensorData: [] } });
+  const [chartHistoricalData, setChartHistoricalData] = useState({ ASide: [], BSide: [] });
   const [temperatureStats, setTemperatureStats] = useState({
-    ASide: { maxTemp: '0.0°C', minTemp: '0.0°C', avgTemp: '0.0°C' },
-    BSide: { maxTemp: '0.0°C', minTemp: '0.0°C', avgTemp: '0.0°C' }
+    ASide: { maxTemp: '--', minTemp: '--', avgTemp: '--' },
+    BSide: { maxTemp: '--', minTemp: '--', avgTemp: '--' }
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,9 +132,9 @@ const Dashboard = () => {
 
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return; // Don't do anything if the interval hasn't changed
-    
+
     setTimeInterval(interval);
-    
+
     try {
       // Fetch new data with the updated interval
       await fetchSensorData();
@@ -150,71 +150,65 @@ const Dashboard = () => {
     setChartUpdateKey(prev => prev + 1);
   };
 
-  // Process historical data for the chart
-  const processChartData = useCallback(() => {
-    const aSideData = historicalData.ASide?.sensorData || [];
-    const bSideData = historicalData.BSide?.sensorData || [];
+  // Process historical data for the chart to show all sensor series
+  const chartData = useMemo(() => {
+    console.log('Processing chart data for side:', selectedSide);
     
-    // Initialize arrays for both sides
-    const aSideHourlyData = Array(24).fill(null);
-    const bSideHourlyData = Array(24).fill(null);
-    
-    // Process ASide data
-    aSideData.forEach(entry => {
-      if (entry && entry.dataPoints && entry.dataPoints.length > 0) {
-        const latestPoint = entry.dataPoints[entry.dataPoints.length - 1];
-        if (latestPoint && latestPoint.timestamp) {
-          const date = new Date(latestPoint.timestamp);
-          const hour = date.getHours();
-          
-          // Calculate average temperature from all sensors
-          const sensors = latestPoint.sensors || {};
-          const sensorValues = Object.values(sensors).filter(val => typeof val === 'number');
-          const avgTemp = sensorValues.length > 0 
-            ? sensorValues.reduce((sum, val) => sum + val, 0) / sensorValues.length 
-            : null;
-            
-          if (avgTemp !== null) {
-            aSideHourlyData[hour] = parseFloat(avgTemp.toFixed(2));
-          }
-        }
-      }
+    const sideData = chartHistoricalData[selectedSide] || [];
+    console.log('Raw side data:', sideData);
+
+    // Get all unique sensor IDs from the first data point
+    const sensorIds = sideData[0]?.sensors ? Object.keys(sideData[0].sensors) : [];
+    console.log('Sensor IDs:', sensorIds);
+
+    // Extract timestamps
+    const timestamps = sideData
+      .filter(entry => entry?.timestamp)
+      .map(entry => new Date(entry.timestamp));
+
+    // Create a dataset for each sensor
+    const datasets = sensorIds.map((sensorId, index) => {
+      // Generate a consistent color for each sensor
+      const hue = (index * 137.5) % 360; // Golden angle for color distribution
+      const color = `hsl(${hue}, 70%, 50%)`;
+      
+      // Get values for this sensor across all timestamps
+      const data = sideData.map(entry => {
+        const value = entry?.sensors?.[sensorId];
+        return typeof value === 'number' ? parseFloat(value.toFixed(2)) : null;
+      });
+
+      return {
+        label: sensorId,
+        data,
+        borderColor: color,
+        backgroundColor: `hsla(${hue}, 70%, 50%, 0.1)`,
+        borderWidth: 1,
+        pointRadius: 1.5,
+        tension: 0.2,
+        fill: false
+      };
     });
 
-    // Process BSide data
-    bSideData.forEach(entry => {
-      if (entry && entry.dataPoints && entry.dataPoints.length > 0) {
-        const latestPoint = entry.dataPoints[entry.dataPoints.length - 1];
-        if (latestPoint && latestPoint.timestamp) {
-          const date = new Date(latestPoint.timestamp);
-          const hour = date.getHours();
-          
-          // Calculate average temperature from all sensors
-          const sensors = latestPoint.sensors || {};
-          const sensorValues = Object.values(sensors).filter(val => typeof val === 'number');
-          const avgTemp = sensorValues.length > 0 
-            ? sensorValues.reduce((sum, val) => sum + val, 0) / sensorValues.length 
-            : null;
-            
-          if (avgTemp !== null) {
-            bSideHourlyData[hour] = parseFloat(avgTemp.toFixed(2));
-          }
-        }
-      }
-    });
+    // Format labels for display
+    const labels = timestamps.map(date => 
+      date.toLocaleString('en-GB', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    );
+
+    console.log('Processed datasets:', datasets);
 
     return {
-      labels: Array.from({ length: 24 }, (_, i) => {
-        const date = new Date();
-        date.setHours(i, 0, 0, 0);
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', hour12: true });
-      }),
-      aSideData: aSideHourlyData,
-      bSideData: bSideHourlyData
+      labels,
+      datasets,
+      // Store raw data for reference
+      rawData: sideData
     };
-  }, [historicalData]);
-
-  const chartData = processChartData();
+  }, [chartHistoricalData, selectedSide]);
   const [sensors, setSensors] = useState([]);
   const [hourlyAverages, setHourlyAverages] = useState(Array(24).fill().map((_, i) => ({
     index: i + 1,
@@ -273,21 +267,34 @@ const Dashboard = () => {
         }
       });
 
+      console.log('Received response:', response.data);
       if (!response.data || !response.data.data) {
         throw new Error('Invalid response format from server');
       }
 
-      const { realtime, hourlyAverages } = response.data.data;
-      
+      const { realtime, hourlyAverages, historical } = response.data.data;
+      console.log('Received realtime data:', realtime);
+
       if (hourlyAverages && Array.isArray(hourlyAverages)) {
         setHourlyAverages(hourlyAverages);
       }
-      
-      // Update temperature statistics if available in the response
+      console.log('Received historical:', historical);
+      if (historical) {
+        console.log('Setting chart historical data:', {
+          ASide: Array.isArray(historical.ASide) ? historical.ASide : [],
+          BSide: Array.isArray(historical.BSide) ? historical.BSide : []
+        });
+        
+        setChartHistoricalData({
+          ASide: Array.isArray(historical.ASide) ? historical.ASide : [],
+          BSide: Array.isArray(historical.BSide) ? historical.BSide : []
+        });
+      }
+
       if (response.data.data.temperatureStats) {
         setTemperatureStats(response.data.data.temperatureStats);
       }
-      
+
       const formattedSensors = [];
       realtime.forEach(waveguide => {
         if (!waveguide || !waveguide.sensors) return;
@@ -344,7 +351,7 @@ const Dashboard = () => {
           await fetchSensorData();
           console.log(`Fetch attempt #${i + 1} was successful.`);
           success = true;
-          break; 
+          break;
         } catch (error) {
           console.error(`Fetch attempt #${i + 1} failed.`);
           if (i < 3) {
@@ -357,7 +364,7 @@ const Dashboard = () => {
           }
         }
       }
-      
+
       if (isMounted) {
         console.log('Poll cycle finished.');
         if (success) {
@@ -549,7 +556,7 @@ const Dashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white/30 divide-y divide-gray-200">
-                  {hourlyAverages?.filter(hourData => 
+                  {hourlyAverages?.filter(hourData =>
                     hourData?.entries?.length > 0
                   ).map((hourData, index) => {
                     const getStatusClass = (temp) => {
@@ -567,7 +574,7 @@ const Dashboard = () => {
                     const getSideData = (side) => {
                       const entry = hourData.entries.find(e => e.side === side);
                       if (!entry) return { temp: '--', status: { class: 'bg-gray-100 text-gray-800', text: '--' } };
-                      
+
                       return {
                         temp: typeof entry.temp === 'number' ? entry.temp.toFixed(1) : '--',
                         status: {
@@ -774,23 +781,23 @@ const Dashboard = () => {
                   </label>
                 </div>
               </div>
-              <button 
-                  onClick={() => setShowLegendPopup(!showLegendPopup)}
-                  className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors border border-blue-100"
-                >
-                  {showLegendPopup ? 'Hide Legend' : 'Show Legend'}
-                </button>
+              <button
+                onClick={() => setShowLegendPopup(!showLegendPopup)}
+                className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors border border-blue-100"
+              >
+                {showLegendPopup ? 'Hide Legend' : 'Show Legend'}
+              </button>
               {showLegendPopup && (
                 <div className="absolute top-12 right-3 bg-white p-3 rounded-lg shadow-lg border border-gray-200 z-10 max-h-60 overflow-y-auto">
                   <div className="grid grid-cols-2 gap-2">
                     {sensors
                       .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
                       .map((sensor, index) => {
-                        const sensorId = `AS${index + 1}`;
+                        const sensorId = `Sensor${index + 1}`;
                         const isHidden = hiddenSensors[sensorId];
                         return (
-                          <div 
-                            key={index} 
+                          <div
+                            key={index}
                             className={`flex items-center text-xs cursor-pointer p-1 rounded ${isHidden ? 'opacity-40' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -801,15 +808,15 @@ const Dashboard = () => {
                             }}
                             title={isHidden ? 'Show sensor' : 'Hide sensor'}
                           >
-                            <div 
-                              className="w-3 h-3 rounded-full mr-2" 
+                            <div
+                              className="w-3 h-3 rounded-full mr-2"
                               style={{
                                 backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
                                 opacity: isHidden ? 0.5 : 0.9,
                                 transition: 'opacity 0.2s'
                               }}
                             />
-                            <span className={isHidden ? 'line-through' : ''}>AS{index + 1}</span>
+                            <span className={isHidden ? 'line-through' : ''}>Sensor{index + 1}</span>
                           </div>
                         );
                       }
@@ -836,139 +843,70 @@ const Dashboard = () => {
 
             {/* Chart Container */}
             <div className="relative h-[calc(100%-50px)] bg-white/50 rounded-lg p-3 border border-gray-100">
-             
-              {(() => {
-                // Generate datasets
-                const datasets = sensors
-                    .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
-                  .map((sensor, index) => {
-                    const sensorId = `AS${index + 1}`;
-                    if (hiddenSensors[sensorId]) return null;
-                    
-                        const baseTemp = parseFloat(sensor.value) || 25;
-                    const data = Array(24).fill(null).map((_, hour) => {
-                        return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
-                    });
-
-                    return {
-                      label: sensorId,
-                      data,
-                      borderColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                      backgroundColor: `hsla(${(index * 137.5) % 360}, 70%, 50%, 0.1)`,
-                      tension: 0.3,
-                      pointBackgroundColor: 'white',
-                      pointBorderColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                      pointHoverRadius: 6,
-                      pointHoverBackgroundColor: 'white',
-                      pointHoverBorderColor: `hsl(${(index * 137.5) % 360}, 70%, 60%)`,
-                      pointHoverBorderWidth: 2,
-                      pointHitRadius: 10,
-                      borderWidth: 1.5,
-                      borderDash: [],
-                      opacity: 0.9
-                    };
-                  })
-                  .filter(Boolean);
-
-                // Calculate max temperature from visible data
-                const allTemps = datasets.flatMap(d => d.data);
-                const maxTemp = allTemps.length > 0 
-                  ? Math.max(...allTemps) + 5  // Add 5° buffer
-                  : 120; // Default if no data
-
-                return (
-                  <Line
-                    key={chartUpdateKey}
-                    data={{
-                      labels: chartData.labels,
-                      datasets: datasets
+              <div className="absolute right-4 top-2 z-10 text-xs text-gray-500">
+                {selectedSide} - {chartData.datasets?.length || 0} sensors
+              </div>
+              <Line
+                key={`${chartUpdateKey}-${selectedSide}`}
+                data={{
+                  labels: chartData.labels,
+                  datasets: chartData.datasets || []
                 }}
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
                     legend: {
-                          display: false
+                      display: true,
+                      position: 'right',
+                      labels: {
+                        boxWidth: 10,
+                        padding: 10,
+                        usePointStyle: true,
+                        pointStyle: 'circle',
+                        font: {
+                          size: 10
+                        }
+                      }
                     },
                     tooltip: {
-                          filter: (tooltipItem) => {
-                            const datasetIndex = tooltipItem.datasetIndex;
-                            const sensorId = `AS${datasetIndex + 1}`;
-                            return !hiddenSensors[sensorId];
-                          },
-                          backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                      titleColor: '#1F2937',
-                          titleFont: { 
-                            weight: '600',
-                            size: 13
-                          },
+                      backgroundColor: '#fff',
+                      titleColor: '#111827',
+                      titleFont: { weight: '600', size: 12 },
                       bodyColor: '#4B5563',
-                          bodyFont: {
-                            size: 12
-                          },
+                      bodyFont: { size: 11 },
                       borderColor: '#E5E7EB',
                       borderWidth: 1,
-                      padding: 12,
-                      boxShadow: '0 4px 20px -5px rgba(0, 0, 0, 0.1)',
-                      cornerRadius: 8,
-                      displayColors: false,
-                          // Scrollable tooltip settings
-                          boxHeight: 20,
-                          bodySpacing: 4,
-                          maxHeight: 200,
-                          position: 'nearest',
-                          usePointStyle: true,
-                          caretSize: 8,
+                      padding: 10,
+                      cornerRadius: 6,
+                      displayColors: true,
+                      usePointStyle: true,
                       callbacks: {
-                        label: function (context) {
-                          return `  ${context.dataset.label}: ${context.parsed.y}°C`;
-                        },
-                        title: function (context) {
-                          const date = new Date();
-                          date.setHours(context[0].dataIndex, 0, 0, 0);
-                              return [
-                                date.toLocaleDateString('en-US', { 
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                }),
-                                date.toLocaleTimeString('en-US', {
+                        label: (context) => `${context.dataset.label}: ${context.parsed.y}°C`,
+                        title: (context) => {
+                          const date = new Date(chartData.rawData?.[context[0]?.dataIndex]?.timestamp);
+                          return date.toLocaleString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
                             hour: '2-digit',
-                            minute: '2-digit',
-                            hour12: true
-                                })
-                              ];
-                        },
-                        labelTextColor: function(context) {
-                              return `hsl(${(context.datasetIndex * 137.5) % 360}, 70%, 45%)`;
-                            },
-                            labelPointStyle: function() {
-                              return {
-                                pointStyle: 'circle',
-                                rotation: 0
-                              };
+                            minute: '2-digit'
+                          });
                         }
                       }
                     }
                   },
                   scales: {
                     x: {
-                      grid: {
-                        display: false,
-                        drawTicks: false
-                      },
-                      border: {
-                        display: false
-                      },
+                      grid: { display: false },
                       ticks: {
                         color: '#6B7280',
-                        font: {
-                          size: 11
-                        },
-                        maxRotation: 0,
+                        font: { size: 10 },
+                        maxRotation: 45,
+                        minRotation: 45,
                         autoSkip: true,
                         maxTicksLimit: 8,
-                        padding: 8
+                        padding: 4
                       }
                     },
                     y: {
@@ -978,46 +916,14 @@ const Dashboard = () => {
                         drawTicks: false,
                         borderDash: [4, 4]
                       },
-                      border: {
-                        display: false
-                      },
                       ticks: {
                         color: '#6B7280',
-                        font: {
-                          size: 11
-                        },
-                        padding: 8,
-                        callback: function (value) {
-                          return value + '°C';
-                        }
+                        font: { size: 10 },
+                        padding: 6,
+                        callback: value => `${value}°C`
                       },
-                      min: 15,
-                          max: maxTemp, // Dynamic max based on visible data
-                      beginAtZero: false
-                    }
-                  },
-                  elements: {
-                    line: {
-                      borderWidth: 2.5,
-                      borderJoinStyle: 'round',
-                      tension: 0.3
-                    },
-                    point: {
-                          radius: 3, // Show points with a small radius
-                          backgroundColor: 'white',
-                          borderColor: context => {
-                            const index = context.dataIndex;
-                            return `hsl(${(index * 137.5) % 360}, 70%, 50%)`;
-                          },
-                          borderWidth: 1.5,
-                      hoverRadius: 6,
-                          hoverBorderWidth: 2,
-                          hitRadius: 10,
-                          pointStyle: 'circle',
-                          hoverBorderColor: context => {
-                            const index = context.dataIndex;
-                            return `hsl(${(index * 137.5) % 360}, 70%, 40%)`;
-                          }
+                      min: 0,
+                      max: 100
                     }
                   },
                   interaction: {
@@ -1025,13 +931,18 @@ const Dashboard = () => {
                     mode: 'index',
                     axis: 'x'
                   },
-                  layout: {
-                    padding: {
-                      top: 10,
-                      right: 15,
-                      bottom: 10,
-                      left: 5
+                  elements: {
+                    line: {
+                      borderWidth: 1.5
+                    },
+                    point: {
+                      radius: 1.5,
+                      hoverRadius: 4,
+                      hoverBorderWidth: 2
                     }
+                  },
+                  layout: {
+                    padding: { top: 10, right: 5, bottom: 10, left: 5 }
                   },
                   animation: {
                     duration: 1000,
@@ -1039,31 +950,8 @@ const Dashboard = () => {
                   }
                 }}
               />
-                );
-              })()}
-
-              {/* Status and Data Points Indicator
-              <div className="absolute top-2 left-4 flex gap-2">
-                <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                <div className="flex items-center text-sm font-medium text-gray-700">
-                  <span 
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
-                    }`}
-                  ></span>
-                    {isLoading ? 'Loading...' : error ? 'Error' : 'Live'}
-                </div>
-                </div>
-                {!isLoading && !error && (
-                  <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                    <div className="text-sm font-medium text-gray-700">
-                      {sensors.filter(s => s.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2')).length} Sensors
-                    </div>
-                  </div>
-                )}
-              </div> */}
-
             </div>
+
           </div>
         </div>
       </div>
@@ -1073,14 +961,14 @@ const Dashboard = () => {
 };
 
 // Helper component for waveguide sections
-const WaveguideSection = React.memo(({ 
-  sensors = [], 
-  className = "", 
-  title = "", 
-  scrollLeft, 
-  scrollRight, 
-  scrollPosition, 
-  scrollAmount 
+const WaveguideSection = React.memo(({
+  sensors = [],
+  className = "",
+  title = "",
+  scrollLeft,
+  scrollRight,
+  scrollPosition,
+  scrollAmount
 }) => {
   const [localScrollPosition, setLocalScrollPosition] = useState(0);
   const scrollContainerRef = useRef(null);
@@ -1160,12 +1048,12 @@ const WaveguideSection = React.memo(({
     Array.isArray(prevProps.sensors) &&
     Array.isArray(nextProps.sensors) &&
     prevProps.sensors.length === nextProps.sensors.length &&
-    prevProps.sensors.every((sensor, i) => 
+    prevProps.sensors.every((sensor, i) =>
       sensor.id === nextProps.sensors[i]?.id &&
       sensor.value === nextProps.sensors[i]?.value
     )
   );
-  
+
   return sensorsEqual &&
     prevProps.className === nextProps.className &&
     prevProps.title === nextProps.title &&

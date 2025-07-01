@@ -11,10 +11,27 @@ const MainLayout = () => {
   
   // Check if current route is settings page
   const isSettingsPage = location.pathname.includes('/settings');
-
+ 
   useEffect(() => {
     // Get user role from localStorage
-    const role = localStorage.getItem('role');
+    const userData = localStorage.getItem('userData');
+    let role = null;
+    
+    if (userData) {
+      try {
+        const parsedUserData = JSON.parse(userData);
+        role = parsedUserData.role;
+      } catch (error) {
+        console.error('Error parsing userData:', error);
+      }
+    }
+    
+    // Also check if role is stored directly (fallback)
+    if (!role) {
+      role = localStorage.getItem('role');
+    }
+    
+    console.log('User role from localStorage:', role); // Debug log
     setUserRole(role);
 
     // If no role found, redirect to login
@@ -22,6 +39,11 @@ const MainLayout = () => {
       navigate('/');
     }
   }, [navigate]);
+
+  // Debug logs
+  console.log('isSettingsPage:', isSettingsPage);
+  console.log('userRole:', userRole);
+  console.log('Should hide navbar:', (isSettingsPage && (userRole === 'admin' || userRole === 'superadmin')));
 
   // Handle logout
   const handleLogout = () => {
@@ -53,12 +75,12 @@ const MainLayout = () => {
         <div className="absolute inset-0 bg-white/50" />
       </div>
       
-      {/* Navbar - fixed at top (hide for admin and superadmin) */}
-      {!['admin', 'superadmin'].includes(userRole) ? (
+      {/* Navbar - hide on settings page for admin and superadmin */}
+      {!(isSettingsPage && (userRole === 'admin' || userRole === 'superadmin')) && (
         <div className="flex-shrink-0 z-20">
           <Navbar onLogout={handleLogout} socketRef={socketRef} />
         </div>
-      ) : null}
+      )}
       
       {/* Scrollable content area */}
       <div className="flex-1 xl:overflow-hidden">
@@ -71,6 +93,3 @@ const MainLayout = () => {
 };
 
 export default MainLayout;
-
-
-
