@@ -41,55 +41,58 @@ const Loader = () => (
   </div>
 );
 
-const SensorCard = React.memo(({ sensor }) => {
-  const navigate = useNavigate();
-  
-  const handleNavigate = () => {
-    // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
-    const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
-    const sensorId = sensorNumber ? `sensor${sensorNumber}` : 'sensor1';
-    const side = sensor.name.includes('A') ? 'Aside' : 'Bside';
+const SensorCard = React.memo(
+  function SensorCard({ sensor }) {
+    const navigate = useNavigate();
     
-    // Navigate to CollectorBar with sensorId and side as query parameters
-    navigate(`/CollectorBar?sensorId=${sensorNumber}&side=${side}`);
-  };
-  
-  return (
-    <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
-      <button 
-        onClick={handleNavigate}
-        className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded"
-        aria-label="View sensor details"
-      >
-        <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path fillRule="evenodd" clipRule="evenodd" d="M2.005 0L10.005 8L2.005 16L0 14L6.005 8L0 2L2.005 0Z" fill="#3047C0" />
-        </svg>
-      </button>
+    const handleNavigate = () => {
+      // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
+      const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
+      const sensorId = sensorNumber ? `sensor${sensorNumber}` : 'sensor1';
+      const side = sensor.name.includes('A') ? 'Aside' : 'Bside';
+      
+      // Navigate to CollectorBar with sensorId and side as query parameters
+      navigate(`/CollectorBar?sensorId=${sensorNumber}&side=${side}`);
+    };
+    
+    return (
+      <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
+        <button 
+          onClick={handleNavigate}
+          className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded"
+          aria-label="View sensor details"
+        >
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fillRule="evenodd" clipRule="evenodd" d="M2.005 0L10.005 8L2.005 16L0 14L6.005 8L0 2L2.005 0Z" fill="#3047C0" />
+          </svg>
+        </button>
 
-    <div className={`absolute bottom-3 right-1 bg-white rounded-full p-1 pl-2 pr-2 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-      {sensor.isPositive ? <FaArrowUp className="mr-0.5 mb-1 mt-0.5" /> : <FaArrowDown className="mr-0.5 mb-1 mt-0.5" />}
-      <span className="font-medium">
-        {sensor.difference}
-      </span>
-    </div>
-    <div className="flex flex-col">
-      <h3 className="text-sm font-bold text-[#1e2c74] truncate flex left-0">{sensor.name}</h3>
-      <div className="flex items-baseline">
-        <span className="text-lg font-bold text-[#3047c0]">
-          {sensor.value}
-          <span className="text-lg font-bold text-[#3047c0]">°C</span>
-        </span>
+        <div className={`absolute bottom-3 right-1 bg-white rounded-full p-1 pl-2 pr-2 flex items-center text-xs ${sensor.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+          {sensor.isPositive ? <FaArrowUp className="mr-0.5 mb-1 mt-0.5" /> : <FaArrowDown className="mr-0.5 mb-1 mt-0.5" />}
+          <span className="font-medium">
+            {sensor.difference}
+          </span>
+        </div>
+        <div className="flex flex-col">
+          <h3 className="text-sm font-bold text-[#1e2c74] truncate flex left-0">{sensor.name}</h3>
+          <div className="flex items-baseline">
+            <span className="text-lg font-bold text-[#3047c0]">
+              {sensor.value}
+              <span className="text-lg font-bold text-[#3047c0]">°C</span>
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-  );
-}, (prevProps, nextProps) => {
-  // Only re-render if sensor data changes
-  return prevProps.sensor.value === nextProps.sensor.value &&
-         prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
-         prevProps.sensor.difference === nextProps.sensor.difference &&
-         prevProps.sensor.name === nextProps.sensor.name;
-});
+    );
+  },
+  (prevProps, nextProps) => {
+    // Only re-render if sensor data changes
+    return prevProps.sensor.value === nextProps.sensor.value &&
+           prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
+           prevProps.sensor.difference === nextProps.sensor.difference &&
+           prevProps.sensor.name === nextProps.sensor.name;
+  }
+);
 
 const SensorRow = ({ sensors, waveguide, rowType }) => {
   const filteredSensors = sensors
@@ -736,6 +739,7 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+
           </div>
 
         </div>
@@ -836,14 +840,14 @@ const Dashboard = () => {
               {(() => {
                 // Generate datasets
                 const datasets = sensors
-                  .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                    .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
                   .map((sensor, index) => {
                     const sensorId = `AS${index + 1}`;
                     if (hiddenSensors[sensorId]) return null;
                     
-                    const baseTemp = parseFloat(sensor.value) || 25;
+                        const baseTemp = parseFloat(sensor.value) || 25;
                     const data = Array(24).fill(null).map((_, hour) => {
-                      return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
+                        return Math.round((baseTemp + Math.sin(hour / 24 * Math.PI * 2) * 2) * 10) / 10;
                     });
 
                     return {
@@ -878,36 +882,36 @@ const Dashboard = () => {
                     data={{
                       labels: chartData.labels,
                       datasets: datasets
-                    }}
-                    options={{
-                      responsive: true,
-                      maintainAspectRatio: false,
-                      plugins: {
-                        legend: {
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
                           display: false
-                        },
-                        tooltip: {
+                    },
+                    tooltip: {
                           filter: (tooltipItem) => {
                             const datasetIndex = tooltipItem.datasetIndex;
                             const sensorId = `AS${datasetIndex + 1}`;
                             return !hiddenSensors[sensorId];
                           },
                           backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                          titleColor: '#1F2937',
+                      titleColor: '#1F2937',
                           titleFont: { 
                             weight: '600',
                             size: 13
                           },
-                          bodyColor: '#4B5563',
+                      bodyColor: '#4B5563',
                           bodyFont: {
                             size: 12
                           },
-                          borderColor: '#E5E7EB',
-                          borderWidth: 1,
-                          padding: 12,
-                          boxShadow: '0 4px 20px -5px rgba(0, 0, 0, 0.1)',
-                          cornerRadius: 8,
-                          displayColors: false,
+                      borderColor: '#E5E7EB',
+                      borderWidth: 1,
+                      padding: 12,
+                      boxShadow: '0 4px 20px -5px rgba(0, 0, 0, 0.1)',
+                      cornerRadius: 8,
+                      displayColors: false,
                           // Scrollable tooltip settings
                           boxHeight: 20,
                           bodySpacing: 4,
@@ -915,13 +919,13 @@ const Dashboard = () => {
                           position: 'nearest',
                           usePointStyle: true,
                           caretSize: 8,
-                          callbacks: {
-                            label: function (context) {
-                              return `  ${context.dataset.label}: ${context.parsed.y}°C`;
-                            },
-                            title: function (context) {
-                              const date = new Date();
-                              date.setHours(context[0].dataIndex, 0, 0, 0);
+                      callbacks: {
+                        label: function (context) {
+                          return `  ${context.dataset.label}: ${context.parsed.y}°C`;
+                        },
+                        title: function (context) {
+                          const date = new Date();
+                          date.setHours(context[0].dataIndex, 0, 0, 0);
                               return [
                                 date.toLocaleDateString('en-US', { 
                                   year: 'numeric',
@@ -929,13 +933,13 @@ const Dashboard = () => {
                                   day: 'numeric'
                                 }),
                                 date.toLocaleTimeString('en-US', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                  hour12: true
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: true
                                 })
                               ];
-                            },
-                            labelTextColor: function(context) {
+                        },
+                        labelTextColor: function(context) {
                               return `hsl(${(context.datasetIndex * 137.5) % 360}, 70%, 45%)`;
                             },
                             labelPointStyle: function() {
@@ -943,62 +947,62 @@ const Dashboard = () => {
                                 pointStyle: 'circle',
                                 rotation: 0
                               };
-                            }
-                          }
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: {
+                      grid: {
+                        display: false,
+                        drawTicks: false
+                      },
+                      border: {
+                        display: false
+                      },
+                      ticks: {
+                        color: '#6B7280',
+                        font: {
+                          size: 11
+                        },
+                        maxRotation: 0,
+                        autoSkip: true,
+                        maxTicksLimit: 8,
+                        padding: 8
+                      }
+                    },
+                    y: {
+                      grid: {
+                        color: 'rgba(229, 231, 235, 0.5)',
+                        drawBorder: false,
+                        drawTicks: false,
+                        borderDash: [4, 4]
+                      },
+                      border: {
+                        display: false
+                      },
+                      ticks: {
+                        color: '#6B7280',
+                        font: {
+                          size: 11
+                        },
+                        padding: 8,
+                        callback: function (value) {
+                          return value + '°C';
                         }
                       },
-                      scales: {
-                        x: {
-                          grid: {
-                            display: false,
-                            drawTicks: false
-                          },
-                          border: {
-                            display: false
-                          },
-                          ticks: {
-                            color: '#6B7280',
-                            font: {
-                              size: 11
-                            },
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 8,
-                            padding: 8
-                          }
-                        },
-                        y: {
-                          grid: {
-                            color: 'rgba(229, 231, 235, 0.5)',
-                            drawBorder: false,
-                            drawTicks: false,
-                            borderDash: [4, 4]
-                          },
-                          border: {
-                            display: false
-                          },
-                          ticks: {
-                            color: '#6B7280',
-                            font: {
-                              size: 11
-                            },
-                            padding: 8,
-                            callback: function (value) {
-                              return value + '°C';
-                            }
-                          },
-                          min: 15,
+                      min: 15,
                           max: maxTemp, // Dynamic max based on visible data
-                          beginAtZero: false
-                        }
-                      },
-                      elements: {
-                        line: {
-                          borderWidth: 2.5,
-                          borderJoinStyle: 'round',
-                          tension: 0.3
-                        },
-                        point: {
+                      beginAtZero: false
+                    }
+                  },
+                  elements: {
+                    line: {
+                      borderWidth: 2.5,
+                      borderJoinStyle: 'round',
+                      tension: 0.3
+                    },
+                    point: {
                           radius: 3, // Show points with a small radius
                           backgroundColor: 'white',
                           borderColor: context => {
@@ -1006,7 +1010,7 @@ const Dashboard = () => {
                             return `hsl(${(index * 137.5) % 360}, 70%, 50%)`;
                           },
                           borderWidth: 1.5,
-                          hoverRadius: 6,
+                      hoverRadius: 6,
                           hoverBorderWidth: 2,
                           hitRadius: 10,
                           pointStyle: 'circle',
@@ -1014,41 +1018,41 @@ const Dashboard = () => {
                             const index = context.dataIndex;
                             return `hsl(${(index * 137.5) % 360}, 70%, 40%)`;
                           }
-                        }
-                      },
-                      interaction: {
-                        intersect: false,
-                        mode: 'index',
-                        axis: 'x'
-                      },
-                      layout: {
-                        padding: {
-                          top: 10,
-                          right: 15,
-                          bottom: 10,
-                          left: 5
-                        }
-                      },
-                      animation: {
-                        duration: 1000,
-                        easing: 'easeOutQuart'
-                      }
-                    }}
-                  />
+                    }
+                  },
+                  interaction: {
+                    intersect: false,
+                    mode: 'index',
+                    axis: 'x'
+                  },
+                  layout: {
+                    padding: {
+                      top: 10,
+                      right: 15,
+                      bottom: 10,
+                      left: 5
+                    }
+                  },
+                  animation: {
+                    duration: 1000,
+                    easing: 'easeOutQuart'
+                  }
+                }}
+              />
                 );
               })()}
 
               {/* Status and Data Points Indicator
               <div className="absolute top-2 left-4 flex gap-2">
                 <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                  <div className="flex items-center text-sm font-medium text-gray-700">
-                    <span 
-                      className={`w-2 h-2 rounded-full mr-2 ${
-                        isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
-                      }`}
-                    ></span>
+                <div className="flex items-center text-sm font-medium text-gray-700">
+                  <span 
+                    className={`w-2 h-2 rounded-full mr-2 ${
+                      isLoading ? 'bg-yellow-400' : error ? 'bg-red-400' : 'bg-green-400'
+                    }`}
+                  ></span>
                     {isLoading ? 'Loading...' : error ? 'Error' : 'Live'}
-                  </div>
+                </div>
                 </div>
                 {!isLoading && !error && (
                   <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
