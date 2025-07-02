@@ -84,35 +84,8 @@ const SensorCard = React.memo(
         </div>
       </div>
     );
-  },
-  (prevProps, nextProps) => {
-    // Only re-render if sensor data changes
-    return prevProps.sensor.value === nextProps.sensor.value &&
-      prevProps.sensor.isPositive === nextProps.sensor.isPositive &&
-      prevProps.sensor.difference === nextProps.sensor.difference &&
-      prevProps.sensor.name === nextProps.sensor.name;
   }
 );
-
-const SensorRow = ({ sensors, waveguide, rowType }) => {
-  const filteredSensors = sensors
-    .filter(sensor => sensor.waveguide === waveguide)
-    .filter((_, index) => rowType === 'even' ? index % 2 === 0 : index % 2 !== 0);
-
-  if (filteredSensors.length === 0) return null;
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="grid grid-flow-col auto-cols-max gap-2 w-max">
-        {filteredSensors.map(sensor => (
-          <div key={sensor.id} className="w-40">
-            <SensorCard sensor={sensor} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 const Dashboard = () => {
   const [showLegendPopup, setShowLegendPopup] = useState(false);
@@ -129,7 +102,6 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [previousSensorData, setPreviousSensorData] = useState({});
   const intervalRef = useRef();
-
 
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return;
@@ -157,7 +129,7 @@ const Dashboard = () => {
   // Process historical data for the chart to show all sensor series
   const chartData = useMemo(() => {
     console.log('Processing chart data for side:', selectedSide);
-    
+
     const sideData = chartHistoricalData[selectedSide] || [];
     console.log('Raw side data:', sideData);
 
@@ -175,7 +147,7 @@ const Dashboard = () => {
       // Generate a consistent color for each sensor
       const hue = (index * 137.5) % 360; // Golden angle for color distribution
       const color = `hsl(${hue}, 70%, 50%)`;
-      
+
       // Get values for this sensor across all timestamps
       const data = sideData.map(entry => {
         const value = entry?.sensors?.[sensorId];
@@ -195,12 +167,12 @@ const Dashboard = () => {
     });
 
     // Format labels for display
-    const labels = timestamps.map(date => 
-      date.toLocaleString('en-GB', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+    const labels = timestamps.map(date =>
+      date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
       })
     );
 
@@ -249,7 +221,7 @@ const Dashboard = () => {
     }
   }, [scrollAmount]);
 
-  const scrollRight = React.useCallback(() => {
+  const scrollRight = useCallback(() => {
     if (scrollContainerRef.current) {
       scrollContainerRef.current.scrollBy({
         left: scrollAmount,
@@ -407,7 +379,6 @@ const Dashboard = () => {
     };
   }, []);
 
-
   return (
     <div className="w-full h-full">
       <div className="flex flex-col gap-4 p-1 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
@@ -432,102 +403,42 @@ const Dashboard = () => {
                 >
 
 
+                  <div className="w-full">
 
-                  <div className="flex p-1 space-x-2">
-                    {isLoading ? (
-                      <div className="flex justify-center items-center p-4 w-full">
-                        <div className="w-8 h-8 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
-                      </div>
-                    ) : error ? (
-                      <div className="p-4 w-full text-center text-red-500">
-                        Error loading sensor data: {error}
-                      </div>
-                    ) : sensors.length > 0 ? (
-                      <div className="w-full">
+                    <div>
+                      <div className="overflow-x-auto -mx-4 px-4">
+                        <div className="inline-flex space-x-4 min-w-max w-full">
+                          {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
+                            <div key={`wg1-${rowIndex}`} className="flex flex-col ">
+                              {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                                <div key={sensor.id} className="w-40 h-24">
+                                  <SensorCard sensor={sensor} />
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
 
-                        <WaveguideSection
-                          sensors={wg1Sensors}
-                          scrollLeft={scrollLeft}
-                          scrollRight={scrollRight}
-                          scrollPosition={scrollPosition}
-                          scrollAmount={scrollAmount}
-                        />
-                        
-                        <WaveguideSection
-                          sensors={wg2Sensors}
-                          scrollLeft={scrollLeft}
-                          scrollRight={scrollRight}
-                          scrollPosition={scrollPosition}
-                          scrollAmount={scrollAmount}
-                        />
+
+                        <div className="inline-flex space-x-4 min-w-max w-full">
+                          {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
+                            <div key={`wg2-${rowIndex}`} className="flex flex-col">
+                              {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                                <div key={sensor.id} className="w-40 h-24">
+                                  <SensorCard sensor={sensor} />
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+
+                        </div>
                       </div>
-                    ) : (
-                      <div className="p-4 w-full text-center text-gray-500">
-                        No sensor data available
-                      </div>
-                    )}
+                    </div>
+
+
+
+
                   </div>
-                  {/* Mobile */}
-                  {/* <div className="flex p-1 space-x-2 md:hidden">
-                    {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
-                        {sensors.slice(
-                          colIndex * 4,
-                          colIndex * 4 + (window.innerWidth >= 1920 ? 3 : 4)
-                        ).map((sensor) => (
-                          <div key={sensor.id} className="h-20">
-                            <SensorCard sensor={sensor} />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div> */}
-
-                  {/* ipad mini and ipad air */}
-                  {/* <div className="hidden p-1 space-x-2 md:flex lg:hidden">
-                    {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
-                        {sensors.slice(
-                          colIndex * 5,
-                          colIndex * 5 + 5
-                        ).map((sensor) => (
-                          <div key={sensor.id} className="h-20">
-                            <SensorCard sensor={sensor} />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                </div>
-                
-                <div className="hidden p-1 space-x-2 xl:flex md:hidden lg:hidden 2xl:hidden">
-                    {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
-                        {sensors.slice(
-                          colIndex * 3,
-                          colIndex * 3 + 3
-                        ).map((sensor) => (
-                          <div key={sensor.id} className="h-20">
-                            <SensorCard sensor={sensor} />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                </div>
-
-                <div className="hidden p-1 mt-5 space-x-4 2xl:flex">
-                    {Array(Math.ceil(sensors.length / 4)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none space-y-2 w-40">
-                        {sensors.slice(
-                          colIndex * 4,
-                          colIndex * 4 + 4
-                        ).map((sensor) => (
-                          <div key={sensor.id} className="h-20">
-                            <SensorCard sensor={sensor} />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                </div> */}
                 </div>
                 <button
                   onClick={scrollRight}
@@ -535,7 +446,7 @@ const Dashboard = () => {
                   aria-label="Scroll right"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5 15.75 12l7.5 7.5-7.5 7.5" />
                   </svg>
                 </button>
               </div>
@@ -549,7 +460,7 @@ const Dashboard = () => {
             <ModelViewer modelPath="/side_shell.glb" />
           </Suspense>
         </div>
-        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch p-4 rounded-2xl border border-gray-100 shadow-md bg-white xl:flex-row xl:order-3">
+        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch p-4 rounded-2xl border border-gray-100 shadow-md backdrop-blur-sm   bg-white/30 xl:flex-row xl:order-3">
           <div className="w-full rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto overflow-y-auto h-96 md:h-full scrollbar-custom">
               <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
@@ -708,7 +619,7 @@ const Dashboard = () => {
                   <span className="text-sm font-medium text-gray-600">Avg Temp</span>
                   <div className="p-1.5 bg-gray-100 rounded-lg hidden 2xl:flex">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                     </svg>
                   </div>
                 </div>
@@ -775,6 +686,7 @@ const Dashboard = () => {
           </div>
 
         </div>
+
         <div className="order-4 p-4 rounded-2xl border-2 shadow-md backdrop-blur-sm xl:order-4 bg-white/30">
           <div className="relative w-full md:h-full">
             {/* Chart Header */}
@@ -817,48 +729,48 @@ const Dashboard = () => {
                   </svg>
                 </button>
                 {showLegendPopup && (
-                <div className="absolute right-0 top-8 z-10 p-3 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
-                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">Sensors</h4>
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                    {sensors
-                      .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
-                      .map((sensor, index) => {
-                        const sensorId = `AS${index + 1}`; // Changed to match chart filter format
-                        const isHidden = hiddenSensors[sensorId];
-                        return (
-                          <div
-                            key={index}
-                            className={`flex items-center text-xs cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors ${isHidden ? 'opacity-40' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setHiddenSensors(prev => ({
-                                ...prev,
-                                [sensorId]: !prev[sensorId]
-                              }));
-                            }}
-                            title={isHidden ? 'Show sensor' : 'Hide sensor'}
-                          >
-                            <div className="mr-2 flex-shrink-0">
-                              <div 
-                                className="w-3 h-3 rounded-full"
-                                style={{
-                                  backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                                  opacity: isHidden ? 0.5 : 0.9,
-                                  transition: 'opacity 0.2s',
-                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                                }}
-                              />
+                  <div className="absolute right-0 top-8 z-10 p-3 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
+                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">Sensors</h4>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      {sensors
+                        .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                        .map((sensor, index) => {
+                          const sensorId = `AS${index + 1}`; // Changed to match chart filter format
+                          const isHidden = hiddenSensors[sensorId];
+                          return (
+                            <div
+                              key={index}
+                              className={`flex items-center text-xs cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors ${isHidden ? 'opacity-40' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHiddenSensors(prev => ({
+                                  ...prev,
+                                  [sensorId]: !prev[sensorId]
+                                }));
+                              }}
+                              title={isHidden ? 'Show sensor' : 'Hide sensor'}
+                            >
+                              <div className="mr-2 flex-shrink-0">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{
+                                    backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                                    opacity: isHidden ? 0.5 : 0.9,
+                                    transition: 'opacity 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                  }}
+                                />
+                              </div>
+                              <span className={`truncate ${isHidden ? 'line-through text-gray-500' : 'text-gray-700'}`}>
+                                Sensor{index + 1}
+                              </span>
                             </div>
-                            <span className={`truncate ${isHidden ? 'line-through text-gray-500' : 'text-gray-700'}`}>
-                              Sensor{index + 1}
-                            </span>
-                          </div>
-                        );
-                      }
-                      )}
+                          );
+                        }
+                        )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
               <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
                 {['Live', '1h', '2h', '5h', '7h', '12h'].map((interval) => (
@@ -891,7 +803,7 @@ const Dashboard = () => {
                     return !hiddenSensors[sensorId];
                   })
                 }}
-                
+
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
@@ -995,107 +907,5 @@ const Dashboard = () => {
   );
 };
 
-// Helper component for waveguide sections
-const WaveguideSection = React.memo(({
-  sensors = [],
-  className = "",
-  title = "",
-  scrollLeft,
-  scrollRight,
-  scrollPosition,
-  scrollAmount
-}) => {
-  const [localScrollPosition, setLocalScrollPosition] = useState(0);
-  const scrollContainerRef = useRef(null);
-
-  const handleScroll = useCallback((e) => {
-    setLocalScrollPosition(e.target.scrollLeft);
-  }, []);
-
-  const handleScrollLeft = useCallback(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: -scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  }, [scrollAmount]);
-
-  const handleScrollRight = useCallback(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  }, [scrollAmount]);
-
-  if (!sensors || sensors.length === 0) return null;
-
-  return (
-    <section className={`relative  ${className}`}>
-      <h3 className="text-lg font-semibold mb-4 text-[#1e2c74]">{title}</h3>
-      <div className="relative">
-        <button
-          onClick={handleScrollLeft}
-          className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${localScrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-          aria-label={`Scroll ${title} left`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-          </svg>
-        </button>
-
-        <div
-          ref={scrollContainerRef}
-          className="overflow-x-auto scrollbar-custom"
-          onScroll={handleScroll}
-          style={{ scrollBehavior: 'smooth' }}
-        >
-          <div className="grid grid-flow-col auto-cols-max auto-rows-auto gap-2 w-max">
-            {sensors.map((sensor, i) => (
-              <div
-                key={sensor.id}
-                className="w-40"
-                style={{ gridRow: i % 2 === 0 ? 1 : 2 }}
-              >
-                <SensorCard sensor={sensor} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <button
-          onClick={handleScrollRight}
-          className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && localScrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-          aria-label={`Scroll ${title} right`}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </button>
-      </div>
-    </section>
-  );
-}, (prevProps, nextProps) => {
-  // Deep compare sensors array and other props
-  const sensorsEqual = prevProps.sensors === nextProps.sensors || (
-    Array.isArray(prevProps.sensors) &&
-    Array.isArray(nextProps.sensors) &&
-    prevProps.sensors.length === nextProps.sensors.length &&
-    prevProps.sensors.every((sensor, i) =>
-      sensor.id === nextProps.sensors[i]?.id &&
-      sensor.value === nextProps.sensors[i]?.value
-    )
-  );
-
-return sensorsEqual &&
-  prevProps.className === nextProps.className &&
-  prevProps.title === nextProps.title &&
-  prevProps.scrollAmount === nextProps.scrollAmount;
-});
-
-// Memoize the sensor card to prevent unnecessary re-renders
-const MemoizedSensorCard = React.memo(SensorCard);
 
 export default Dashboard;
