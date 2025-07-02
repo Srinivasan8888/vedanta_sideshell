@@ -11,9 +11,6 @@ import xyma_logo from '../../Assets/images/Xyma-Logo.png';
 // Constants
 const DEVICE_LIST = [
   { id: 1, name: 'XY001' },
-  { id: 2, name: 'XY002' },
-  { id: 3, name: 'XY003' },
-  { id: 4, name: 'XY004' },
 ];
 
 // Icons

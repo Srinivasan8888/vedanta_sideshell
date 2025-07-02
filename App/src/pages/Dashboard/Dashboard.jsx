@@ -36,8 +36,8 @@ const ModelViewer = lazy(() =>
 
 // Simple loading component
 const Loader = () => (
-  <div className="w-full h-full flex items-center justify-center">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+  <div className="flex justify-center items-center w-full h-full">
+    <div className="w-12 h-12 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
   </div>
 );
 
@@ -59,7 +59,7 @@ const SensorCard = React.memo(
       <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
         <button
           onClick={handleNavigate}
-          className="absolute right-4 top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1 hover:bg-blue-50 rounded"
+          className="absolute top-1 right-4 p-1 rounded opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-blue-50"
           aria-label="View sensor details"
         >
           <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -120,6 +120,7 @@ const Dashboard = () => {
   const [timeInterval, setTimeInterval] = useState('Live');
   const [selectedSide, setSelectedSide] = useState('ASide');
   const [chartHistoricalData, setChartHistoricalData] = useState({ ASide: [], BSide: [] });
+  const [accumulatedData, setAccumulatedData] = useState({ ASide: [], BSide: [] });
   const [temperatureStats, setTemperatureStats] = useState({
     ASide: { maxTemp: '--', minTemp: '--', avgTemp: '--' },
     BSide: { maxTemp: '--', minTemp: '--', avgTemp: '--' }
@@ -131,16 +132,19 @@ const Dashboard = () => {
 
 
   const handleTimeIntervalChange = async (interval) => {
-    if (interval === timeInterval) return; // Don't do anything if the interval hasn't changed
+    if (interval === timeInterval) return;
+
+    // Reset accumulated data when switching to/from Live mode
+    if (interval === 'Live' || timeInterval === 'Live') {
+      setAccumulatedData({ ASide: [], BSide: [] });
+    }
 
     setTimeInterval(interval);
 
     try {
-      // Fetch new data with the updated interval
       await fetchSensorData();
     } catch (error) {
       console.error('Error fetching data for interval:', interval, error);
-      // Error is already handled in fetchSensorData
     }
   };
 
@@ -280,15 +284,23 @@ const Dashboard = () => {
       }
       console.log('Received historical:', historical);
       if (historical) {
-        console.log('Setting chart historical data:', {
+        const newData = {
           ASide: Array.isArray(historical.ASide) ? historical.ASide : [],
           BSide: Array.isArray(historical.BSide) ? historical.BSide : []
-        });
-        
-        setChartHistoricalData({
-          ASide: Array.isArray(historical.ASide) ? historical.ASide : [],
-          BSide: Array.isArray(historical.BSide) ? historical.BSide : []
-        });
+        };
+
+        if (timeInterval === 'Live') {
+          // For Live mode, accumulate data
+          const updatedData = {
+            ASide: [...accumulatedData.ASide, ...newData.ASide],
+            BSide: [...accumulatedData.BSide, ...newData.BSide]
+          };
+          setAccumulatedData(updatedData);
+          setChartHistoricalData(updatedData);
+        } else {
+          // For other intervals, replace the data
+          setChartHistoricalData(newData);
+        }
       }
 
       if (response.data.data.temperatureStats) {
@@ -397,11 +409,11 @@ const Dashboard = () => {
 
 
   return (
-    <div className="h-full w-full">
-      <div className="flex flex-col h-full w-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2 gap-4 p-1">
-        <div className="order-2 rounded-lg overflow-hidden xl:order-1">
-          <div className="grid h-full grid-col gap-2">
-            <div className="bg-white/30 backdrop-blur-sm border-2 border-gray-100 rounded-2xl shadow-md overflow-hidden h-full w-full p-4">
+    <div className="w-full h-full">
+      <div className="flex flex-col gap-4 p-1 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
+        <div className="overflow-hidden order-2 rounded-lg xl:order-1">
+          <div className="grid gap-2 h-full grid-col">
+            <div className="overflow-hidden p-4 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30">
               <div className="relative">
                 <button
                   onClick={scrollLeft}
@@ -414,37 +426,35 @@ const Dashboard = () => {
                 </button>
                 <div
                   ref={scrollContainerRef}
-                  className="flex-1 overflow-x-auto scrollbar-custom xl:overflow-y-hidden px-4"
+                  className="overflow-x-auto flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
                   style={{ scrollBehavior: 'smooth' }}
                   onScroll={handleScroll}
                 >
 
 
 
-                  <div className="flex space-x-2 p-1">
+                  <div className="flex p-1 space-x-2">
                     {isLoading ? (
-                      <div className="flex items-center justify-center w-full p-4">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                      <div className="flex justify-center items-center p-4 w-full">
+                        <div className="w-8 h-8 rounded-full border-t-2 border-b-2 border-blue-500 animate-spin"></div>
                       </div>
                     ) : error ? (
-                      <div className="w-full p-4 text-red-500 text-center">
+                      <div className="p-4 w-full text-center text-red-500">
                         Error loading sensor data: {error}
                       </div>
                     ) : sensors.length > 0 ? (
-                      <div className="w-full ">
+                      <div className="w-full">
 
                         <WaveguideSection
                           sensors={wg1Sensors}
-                          className="wg1-section"
                           scrollLeft={scrollLeft}
                           scrollRight={scrollRight}
                           scrollPosition={scrollPosition}
                           scrollAmount={scrollAmount}
                         />
-                        {/* WG2 Section */}
+                        
                         <WaveguideSection
                           sensors={wg2Sensors}
-                          className="wg2-section"
                           scrollLeft={scrollLeft}
                           scrollRight={scrollRight}
                           scrollPosition={scrollPosition}
@@ -452,15 +462,15 @@ const Dashboard = () => {
                         />
                       </div>
                     ) : (
-                      <div className="w-full p-4 text-gray-500 text-center">
+                      <div className="p-4 w-full text-center text-gray-500">
                         No sensor data available
                       </div>
                     )}
                   </div>
                   {/* Mobile */}
-                  {/* <div className="flex space-x-2 md:hidden p-1">
+                  {/* <div className="flex p-1 space-x-2 md:hidden">
                     {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none w-40 space-y-2 2xl:space-y-3">
+                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
                         {sensors.slice(
                           colIndex * 4,
                           colIndex * 4 + (window.innerWidth >= 1920 ? 3 : 4)
@@ -474,9 +484,9 @@ const Dashboard = () => {
                   </div> */}
 
                   {/* ipad mini and ipad air */}
-                  {/* <div className="md:flex space-x-2 hidden lg:hidden  p-1">
+                  {/* <div className="hidden p-1 space-x-2 md:flex lg:hidden">
                     {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none w-40 space-y-2 2xl:space-y-3">
+                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
                         {sensors.slice(
                           colIndex * 5,
                           colIndex * 5 + 5
@@ -489,9 +499,9 @@ const Dashboard = () => {
                     ))}
                 </div>
                 
-                <div className="xl:flex space-x-2 hidden md:hidden lg:hidden 2xl:hidden p-1">
+                <div className="hidden p-1 space-x-2 xl:flex md:hidden lg:hidden 2xl:hidden">
                     {Array(Math.ceil(sensors.length / 3)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none w-40 space-y-2 2xl:space-y-3">
+                      <div key={colIndex} className="flex-none space-y-2 w-40 2xl:space-y-3">
                         {sensors.slice(
                           colIndex * 3,
                           colIndex * 3 + 3
@@ -504,9 +514,9 @@ const Dashboard = () => {
                     ))}
                 </div>
 
-                <div className="hidden 2xl:flex space-x-4 mt-5  p-1">
+                <div className="hidden p-1 mt-5 space-x-4 2xl:flex">
                     {Array(Math.ceil(sensors.length / 4)).fill().map((_, colIndex) => (
-                      <div key={colIndex} className="flex-none w-40 space-y-2">
+                      <div key={colIndex} className="flex-none space-y-2 w-40">
                         {sensors.slice(
                           colIndex * 4,
                           colIndex * 4 + 4
@@ -532,37 +542,37 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-        {/* <div className="order-1 flex items-center justify-center rounded-2xl  xl:order-2 shadow-md overflow-hidden bg-white/30 backdrop-blur-sm border-2 border-gray-100"> */}
-        <div className="order-1 flex items-center justify-center rounded-2xl  xl:order-2 overflow-hidde">
+        {/* <div className="flex overflow-hidden order-1 justify-center items-center rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm xl:order-2 bg-white/30"> */}
+        <div className="flex order-1 justify-center items-center rounded-2xl xl:order-2 overflow-hidde">
 
-          <Suspense fallback={<div className="w-full h-full flex items-center justify-center">Loading 3D model...</div>}>
+          <Suspense fallback={<div className="flex justify-center items-center w-full h-full">Loading 3D model...</div>}>
             <ModelViewer modelPath="/side_shell.glb" />
           </Suspense>
         </div>
-        <div className="order-3 flex flex-col xl:flex-row items-stretch rounded-2xl xl:order-3 shadow-md p-4 gap-4 bg-white/30 backdrop-blur-sm border border-gray-100 overflow-hidden">
-          <div className="w-full   rounded-xl overflow-hidden">
-            <div className="overflow-x-auto h-96 md:h-full overflow-y-auto scrollbar-custom">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50/50">
-                  <tr>
-                    <th rowSpan="2" className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">#</th>
-                    <th rowSpan="2" className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Time</th>
-                    <th colSpan="3" className="text-center text-sm font-medium text-gray-500 uppercase">Temperature Data</th>
+        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch p-4 rounded-2xl border border-gray-100 shadow-md bg-white xl:flex-row xl:order-3">
+          <div className="w-full rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto overflow-y-auto h-96 md:h-full scrollbar-custom">
+              <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
+                <thead className="bg-gray-50">
+                  <tr className="text-left">
+                    <th rowSpan="2" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">#</th>
+                    <th rowSpan="2" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Time</th>
+                    <th colSpan="3" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider text-center">Temperature Data</th>
                   </tr>
-                  <tr>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Side</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Temp (°C)</th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-500 uppercase">Status</th>
+                  <tr className="text-left">
+                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Side</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Temp (°C)</th>
+                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white/30 divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-100">
                   {hourlyAverages?.filter(hourData =>
                     hourData?.entries?.length > 0
                   ).map((hourData, index) => {
                     const getStatusClass = (temp) => {
-                      if (temp > 35) return 'bg-red-100 text-red-800';
-                      if (temp < 25) return 'bg-blue-100 text-blue-800';
-                      return 'bg-green-100 text-green-800';
+                      if (temp > 35) return 'bg-red-400/20 text-red-700';
+                      if (temp < 25) return 'bg-blue-400/20 text-blue-700';
+                      return 'bg-green-400/20 text-green-700';
                     };
 
                     const getStatusText = (temp) => {
@@ -573,7 +583,7 @@ const Dashboard = () => {
 
                     const getSideData = (side) => {
                       const entry = hourData.entries.find(e => e.side === side);
-                      if (!entry) return { temp: '--', status: { class: 'bg-gray-100 text-gray-800', text: '--' } };
+                      if (!entry) return { temp: '--', status: { class: 'bg-gray-100/30 text-gray-600', text: '--' } };
 
                       return {
                         temp: typeof entry.temp === 'number' ? entry.temp.toFixed(1) : '--',
@@ -589,26 +599,41 @@ const Dashboard = () => {
 
                     return (
                       <React.Fragment key={`${hourData.index}-${index}`}>
-                        <tr className="hover:bg-gray-50/50">
-                          <td rowSpan="2" className="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">
-                            {index + 1}
+                        <tr className="group hover:bg-white/20 transition-colors duration-150">
+                          <td rowSpan="2" className="py-3 px-4 text-sm font-medium text-gray-800 border-r border-gray-100">
+                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-gray-700">
+                              {index + 1}
+                            </span>
                           </td>
-                          <td rowSpan="2" className="px-4 py-2 text-sm text-gray-900 border-r border-gray-200">
-                            {hourData.time || '--'}
+                          <td rowSpan="2" className="py-3 px-4 text-sm font-medium text-gray-700 border-r border-gray-100">
+                            <div className="flex flex-col">
+                              <span className="text-gray-900 font-semibold">{hourData.time?.split(' ')[0] || '--'}</span>
+                              <span className="text-xs text-gray-500">{hourData.time?.split(' ')[1] || ''}</span>
+                            </div>
                           </td>
-                          <td className="px-4 py-2 text-sm text-gray-700">ASide</td>
-                          <td className="px-4 py-2 text-sm text-gray-700">{aSide.temp}°C</td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${aSide.status.class}`}>
+                          <td className="py-2 px-4 text-sm font-medium text-gray-700">
+                            <span className="inline-flex items-center">
+                              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                              ASide
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-sm font-medium text-gray-700">{aSide.temp}°C</td>
+                          <td className="py-2 px-4">
+                            <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${aSide.status.class} backdrop-blur-sm`}>
                               {aSide.status.text}
                             </span>
                           </td>
                         </tr>
-                        <tr className="hover:bg-gray-50/50 border-b border-gray-200">
-                          <td className="px-4 py-2 text-sm text-gray-700">BSide</td>
-                          <td className="px-4 py-2 text-sm text-gray-700">{bSide.temp}°C</td>
-                          <td className="px-4 py-2">
-                            <span className={`px-2 inline-flex text-xs font-semibold rounded-full ${bSide.status.class}`}>
+                        <tr className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100">
+                          <td className="py-2 px-4 text-sm font-medium text-gray-700">
+                            <span className="inline-flex items-center">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+                              BSide
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-sm font-medium text-gray-700">{bSide.temp}°C</td>
+                          <td className="py-2 px-4">
+                            <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${bSide.status.class} backdrop-blur-sm`}>
                               {bSide.status.text}
                             </span>
                           </td>
@@ -621,9 +646,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="w-full h-full flex flex-col bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-2 border-b border-gray-100 flex-shrink-0">
-              <div className="flex items-center justify-between">
+          <div className="flex overflow-hidden flex-col w-full h-full bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="flex-shrink-0 p-2 border-b border-gray-100">
+              <div className="flex justify-between items-center">
                 <h3 className="text-sm font-medium text-gray-700">Temperature Statistics</h3>
                 <div className="flex items-center space-x-1 bg-blue-50 text-blue-600 text-xs font-medium px-2.5 py-1 rounded-full">
                   <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
@@ -632,10 +657,10 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="p-3 grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-2 gap-3 flex-grow">
+            <div className="grid flex-grow grid-cols-2 gap-3 p-3 lg:grid-cols-4 2xl:grid-cols-2">
               {/* Max Temperature Card */}
-              <div className="bg-gradient-to-br from-red-50 to-white p-3 rounded-lg border border-red-100 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-col p-3 h-full bg-gradient-to-br from-red-50 to-white rounded-lg border border-red-100">
+                <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-red-600">Max Temp</span>
                   <div className="p-1.5 bg-red-100 rounded-lg hidden 2xl:flex">
                     <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -645,19 +670,19 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.maxTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.maxTemp}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
-                  <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.maxTemp}</p>
+                  <div className="pl-4 text-center border-l border-gray-200">
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.maxTemp}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
               </div>
 
               {/* Min Temperature Card */}
-              <div className="bg-gradient-to-br from-blue-50 to-white p-3 rounded-lg border border-blue-100 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-col p-3 h-full bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-100">
+                <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-blue-600">Min Temp</span>
                   <div className="p-1.5 bg-blue-100 rounded-lg hidden 2xl:flex">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -667,19 +692,19 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.minTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.minTemp}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
-                  <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.minTemp}</p>
+                  <div className="pl-4 text-center border-l border-gray-200">
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.minTemp}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
               </div>
 
               {/* Average Temperature Card */}
-              <div className="bg-gradient-to-br from-gray-50 to-white p-3 rounded-lg border border-gray-100 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-col p-3 h-full bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
+                <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-gray-600">Avg Temp</span>
                   <div className="p-1.5 bg-gray-100 rounded-lg hidden 2xl:flex">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -689,18 +714,18 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.ASide.avgTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.avgTemp}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
-                  <div className="text-center border-l border-gray-200 pl-4">
-                    <p className="lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold text-gray-800">{temperatureStats.BSide.avgTemp}</p>
+                  <div className="pl-4 text-center border-l border-gray-200">
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.avgTemp}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-amber-50 to-white p-3 rounded-lg border border-amber-100 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-col p-3 h-full bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100">
+                <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-amber-600">Alerts</span>
                   <div className="p-1.5 bg-amber-100 rounded-lg hidden 2xl:flex">
                     <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -708,34 +733,34 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold text-gray-800">3</p>
-                <p className="text-xs text-amber-600 font-medium mt-auto">Requires attention</p>
+                <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold">3</p>
+                <p className="mt-auto text-xs font-medium text-amber-600">Requires attention</p>
               </div>
             </div>
 
-            <div className="mt-auto p-3 bg-gray-50 border-t border-gray-100">
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+            <div className="p-3 mt-auto bg-gray-50 border-t border-gray-100">
+              <div className="grid grid-cols-1 gap-3 items-end sm:grid-cols-5">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Min Threshold</label>
+                  <label className="block mb-1 text-xs font-medium text-gray-600">Min Threshold</label>
                   <div className="relative">
                     <input
                       type="number"
                       className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="Min value"
                     />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">°C</span>
+                    <span className="absolute right-2 top-1/2 text-sm text-gray-500 transform -translate-y-1/2">°C</span>
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Max Threshold</label>
+                  <label className="block mb-1 text-xs font-medium text-gray-600">Max Threshold</label>
                   <div className="relative">
                     <input
                       type="number"
                       className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="Max value"
                     />
-                    <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">°C</span>
+                    <span className="absolute right-2 top-1/2 text-sm text-gray-500 transform -translate-y-1/2">°C</span>
                   </div>
                 </div>
 
@@ -750,11 +775,11 @@ const Dashboard = () => {
           </div>
 
         </div>
-        <div className="order-4 p-4 border-2 rounded-2xl xl:order-4 shadow-md bg-white/30 backdrop-blur-sm">
-          <div className="relative w-full  md:h-full">
+        <div className="order-4 p-4 rounded-2xl border-2 shadow-md backdrop-blur-sm xl:order-4 bg-white/30">
+          <div className="relative w-full md:h-full">
             {/* Chart Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 justify-between items-start mb-4 sm:flex-row sm:items-center">
+              <div className="flex gap-4 items-center">
                 <h3 className="text-lg font-semibold text-gray-800">Temperature Trend</h3>
                 <div className="flex items-center space-x-4">
                   <label className="inline-flex items-center">
@@ -764,7 +789,7 @@ const Dashboard = () => {
                       value="ASide"
                       checked={selectedSide === 'ASide'}
                       onChange={() => handleSideChange('ASide')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">A Side</span>
                   </label>
@@ -775,30 +800,35 @@ const Dashboard = () => {
                       value="BSide"
                       checked={selectedSide === 'BSide'}
                       onChange={() => handleSideChange('BSide')}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">B Side</span>
                   </label>
                 </div>
               </div>
-              <button
-                onClick={() => setShowLegendPopup(!showLegendPopup)}
-                className="px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors border border-blue-100"
-              >
-                {showLegendPopup ? 'Hide Legend' : 'Show Legend'}
-              </button>
-              {showLegendPopup && (
-                <div className="absolute top-12 right-3 bg-white p-3 rounded-lg shadow-lg border border-gray-200 z-10 max-h-60 overflow-y-auto">
-                  <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setShowLegendPopup(!showLegendPopup)}
+                  className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-md border border-blue-100 transition-colors hover:bg-blue-100 flex items-center gap-1"
+                >
+                  <span>Legend</span>
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {showLegendPopup && (
+                <div className="absolute right-0 top-8 z-10 p-3 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
+                  <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">Sensors</h4>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                     {sensors
                       .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
                       .map((sensor, index) => {
-                        const sensorId = `Sensor${index + 1}`;
+                        const sensorId = `AS${index + 1}`; // Changed to match chart filter format
                         const isHidden = hiddenSensors[sensorId];
                         return (
                           <div
                             key={index}
-                            className={`flex items-center text-xs cursor-pointer p-1 rounded ${isHidden ? 'opacity-40' : ''}`}
+                            className={`flex items-center text-xs cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors ${isHidden ? 'opacity-40' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setHiddenSensors(prev => ({
@@ -808,15 +838,20 @@ const Dashboard = () => {
                             }}
                             title={isHidden ? 'Show sensor' : 'Hide sensor'}
                           >
-                            <div
-                              className="w-3 h-3 rounded-full mr-2"
-                              style={{
-                                backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                                opacity: isHidden ? 0.5 : 0.9,
-                                transition: 'opacity 0.2s'
-                              }}
-                            />
-                            <span className={isHidden ? 'line-through' : ''}>Sensor{index + 1}</span>
+                            <div className="mr-2 flex-shrink-0">
+                              <div 
+                                className="w-3 h-3 rounded-full"
+                                style={{
+                                  backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                                  opacity: isHidden ? 0.5 : 0.9,
+                                  transition: 'opacity 0.2s',
+                                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                }}
+                              />
+                            </div>
+                            <span className={`truncate ${isHidden ? 'line-through text-gray-500' : 'text-gray-700'}`}>
+                              Sensor{index + 1}
+                            </span>
                           </div>
                         );
                       }
@@ -824,6 +859,7 @@ const Dashboard = () => {
                   </div>
                 </div>
               )}
+              </div>
               <div className="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
                 {['Live', '1h', '2h', '5h', '7h', '12h'].map((interval) => (
                   <button
@@ -843,33 +879,32 @@ const Dashboard = () => {
 
             {/* Chart Container */}
             <div className="relative h-[calc(100%-50px)] bg-white/50 rounded-lg p-3 border border-gray-100">
-              <div className="absolute right-4 top-2 z-10 text-xs text-gray-500">
+              <div className="absolute top-2 right-4 z-10 text-xs text-gray-500">
                 {selectedSide} - {chartData.datasets?.length || 0} sensors
               </div>
               <Line
                 key={`${chartUpdateKey}-${selectedSide}`}
                 data={{
                   labels: chartData.labels,
-                  datasets: chartData.datasets || []
+                  datasets: (chartData.datasets || []).filter((_, index) => {
+                    const sensorId = `AS${index + 1}`;
+                    return !hiddenSensors[sensorId];
+                  })
                 }}
+                
                 options={{
                   responsive: true,
                   maintainAspectRatio: false,
                   plugins: {
                     legend: {
-                      display: true,
-                      position: 'right',
-                      labels: {
-                        boxWidth: 10,
-                        padding: 10,
-                        usePointStyle: true,
-                        pointStyle: 'circle',
-                        font: {
-                          size: 10
-                        }
-                      }
+                      display: false, // Hide default legend since we're using custom one
                     },
                     tooltip: {
+                      filter: (tooltipItem) => {
+                        const datasetIndex = tooltipItem.datasetIndex;
+                        const sensorId = `AS${datasetIndex + 1}`;
+                        return !hiddenSensors[sensorId];
+                      },
                       backgroundColor: '#fff',
                       titleColor: '#111827',
                       titleFont: { weight: '600', size: 12 },
@@ -998,7 +1033,7 @@ const WaveguideSection = React.memo(({
   if (!sensors || sensors.length === 0) return null;
 
   return (
-    <section className={` relative ${className}`}>
+    <section className={`relative  ${className}`}>
       <h3 className="text-lg font-semibold mb-4 text-[#1e2c74]">{title}</h3>
       <div className="relative">
         <button
@@ -1017,7 +1052,7 @@ const WaveguideSection = React.memo(({
           onScroll={handleScroll}
           style={{ scrollBehavior: 'smooth' }}
         >
-          <div className="grid auto-rows-auto grid-flow-col auto-cols-max gap-2 w-max">
+          <div className="grid grid-flow-col auto-cols-max auto-rows-auto gap-2 w-max">
             {sensors.map((sensor, i) => (
               <div
                 key={sensor.id}
@@ -1054,11 +1089,10 @@ const WaveguideSection = React.memo(({
     )
   );
 
-  return sensorsEqual &&
-    prevProps.className === nextProps.className &&
-    prevProps.title === nextProps.title &&
-    prevProps.scrollPosition === nextProps.scrollPosition &&
-    prevProps.scrollAmount === nextProps.scrollAmount;
+return sensorsEqual &&
+  prevProps.className === nextProps.className &&
+  prevProps.title === nextProps.title &&
+  prevProps.scrollAmount === nextProps.scrollAmount;
 });
 
 // Memoize the sensor card to prevent unnecessary re-renders

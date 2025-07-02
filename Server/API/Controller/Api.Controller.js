@@ -53,8 +53,7 @@ class ApiController {
 
     switch (interval) {
       case 'Live':
-        // For live data, show last 5 minutes
-        startTime.setMinutes(endTime.getMinutes() - 5);
+        startTime.setMinutes(endTime.getMinutes() - 1);
         break;
       case '1h':
         startTime.setHours(endTime.getHours() - 1);
