@@ -1,22 +1,25 @@
 {
   "files": {
-    "main.css": "/static/css/main.22c9249e.css",
-    "main.js": "/static/js/main.3e19a4b9.js",
-    "static/js/453.0a96b997.chunk.js": "/static/js/453.0a96b997.chunk.js",
+    "main.css": "/static/css/main.53c64b50.css",
+    "main.js": "/static/js/main.c18b01ab.js",
+    "static/js/694.743cb2a9.chunk.js": "/static/js/694.743cb2a9.chunk.js",
+    "static/js/453.0c2a64ba.chunk.js": "/static/js/453.0c2a64ba.chunk.js",
+    "static/js/520.3075b9cc.chunk.js": "/static/js/520.3075b9cc.chunk.js",
     "static/media/bg.png": "/static/media/bg.562da04c23da4c6128a3.png",
     "static/media/Vector.svg": "/static/media/Vector.ca9ab374a64840aaf6d12871b1a80b62.svg",
     "static/media/loginbg.png": "/static/media/loginbg.ac7db92a7c5cf7ecceaf.png",
     "static/media/reportimg.png": "/static/media/reportimg.837c6a1acccac8545afd.png",
     "static/media/Poppins-Regular.ttf": "/static/media/Poppins-Regular.35d26b781dc5fda684cc.ttf",
-    "static/media/warning.png": "/static/media/warning.7464b6b177823627f9fc.png",
     "static/media/Vedanta-Logo.png": "/static/media/Vedanta-Logo.0411bd0fdb07b2eadec7.png",
     "index.html": "/index.html",
-    "main.22c9249e.css.map": "/static/css/main.22c9249e.css.map",
-    "main.3e19a4b9.js.map": "/static/js/main.3e19a4b9.js.map",
-    "453.0a96b997.chunk.js.map": "/static/js/453.0a96b997.chunk.js.map"
+    "main.53c64b50.css.map": "/static/css/main.53c64b50.css.map",
+    "main.c18b01ab.js.map": "/static/js/main.c18b01ab.js.map",
+    "694.743cb2a9.chunk.js.map": "/static/js/694.743cb2a9.chunk.js.map",
+    "453.0c2a64ba.chunk.js.map": "/static/js/453.0c2a64ba.chunk.js.map",
+    "520.3075b9cc.chunk.js.map": "/static/js/520.3075b9cc.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.22c9249e.css",
-    "static/js/main.3e19a4b9.js"
+    "static/css/main.53c64b50.css",
+    "static/js/main.c18b01ab.js"
   ]
 }

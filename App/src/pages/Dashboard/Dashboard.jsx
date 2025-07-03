@@ -106,12 +106,14 @@ const Dashboard = () => {
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return;
 
-    // Reset accumulated data when switching to/from Live mode
-    if (interval === 'Live' || timeInterval === 'Live') {
-      setAccumulatedData({ ASide: [], BSide: [] });
-    }
+    // Clear chart data before fetching new data
+    setAccumulatedData({ ASide: [], BSide: [] });
+    setChartHistoricalData({ ASide: [], BSide: [] });
 
     setTimeInterval(interval);
+
+    // Force chart remount by updating the key
+    setChartUpdateKey(prev => prev + 1);
 
     try {
       await fetchSensorData();
@@ -262,14 +264,39 @@ const Dashboard = () => {
         };
 
         if (timeInterval === 'Live') {
-          // For Live mode, accumulate data
-          const updatedData = {
-            ASide: [...accumulatedData.ASide, ...newData.ASide],
-            BSide: [...accumulatedData.BSide, ...newData.BSide]
-          };
-          setAccumulatedData(updatedData);
-          setChartHistoricalData(updatedData);
-        } else {
+  // Use functional form to avoid stale state
+  setAccumulatedData(prev => {
+    const existingATimestamps = new Set(prev.ASide.map(e => e.timestamp || e.TIME));
+    const existingBTimestamps = new Set(prev.BSide.map(e => e.timestamp || e.TIME));
+
+    const transformEntry = (entry) => {
+      const sensors = {};
+      Object.keys(entry).forEach(key => {
+        if (key.startsWith('sensor')) {
+          sensors[key] = Number(entry[key]);
+        }
+      });
+      return {
+        timestamp: entry.timestamp || entry.TIME,
+        sensors
+      };
+    };
+
+    const uniqueASide = newData.ASide
+      .filter(e => !(existingATimestamps.has(e.timestamp || e.TIME)))
+      .map(transformEntry);
+    const uniqueBSide = newData.BSide
+      .filter(e => !(existingBTimestamps.has(e.timestamp || e.TIME)))
+      .map(transformEntry);
+
+    const updatedData = {
+      ASide: [...prev.ASide, ...uniqueASide],
+      BSide: [...prev.BSide, ...uniqueBSide]
+    };
+    setChartHistoricalData(updatedData);
+    return updatedData;
+  });
+} else {
           // For other intervals, replace the data
           setChartHistoricalData(newData);
         }
@@ -388,66 +415,71 @@ const Dashboard = () => {
               <div className="relative">
                 <button
                   onClick={scrollLeft}
-                  className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollPosition <= 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                  aria-label="Scroll left"
+                  className="absolute left-0 top-1/2 z-10 p-2 bg-white rounded-full shadow transform -translate-y-1/2 hover:bg-gray-200"
+                  style={{ marginLeft: '8px' }}
+                  aria-label="Scroll Left"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                  </svg>
+                  &#8592;
                 </button>
                 <div
                   ref={scrollContainerRef}
-                  className="overflow-x-auto flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
+                  className="overflow-x-auto relative flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
                   style={{ scrollBehavior: 'smooth' }}
                   onScroll={handleScroll}
                 >
+                  <div
+                    ref={scrollContainerRef}
+                    className="overflow-x-auto flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
+                    style={{ scrollBehavior: 'smooth' }}
+                    onScroll={handleScroll}
+                  >
 
 
-                  <div className="w-full">
+                    <div className="w-full">
 
-                    <div>
-                      <div className="overflow-x-auto -mx-4 px-4">
-                        <div className="inline-flex space-x-4 min-w-max w-full">
-                          {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
-                            <div key={`wg1-${rowIndex}`} className="flex flex-col ">
-                              {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                                <div key={sensor.id} className="w-40 h-24">
-                                  <SensorCard sensor={sensor} />
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
+                      <div>
+                        <div className="overflow-x-auto px-4 -mx-4">
+                          <div className="inline-flex space-x-4 w-full min-w-max">
+                            {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
+                              <div key={`wg1-${rowIndex}`} className="flex flex-col">
+                                {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                                  <div key={sensor.id} className="w-40 h-24">
+                                    <SensorCard sensor={sensor} />
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
 
 
-                        <div className="inline-flex space-x-4 min-w-max w-full">
-                          {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
-                            <div key={`wg2-${rowIndex}`} className="flex flex-col">
-                              {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                                <div key={sensor.id} className="w-40 h-24">
-                                  <SensorCard sensor={sensor} />
-                                </div>
-                              ))}
-                            </div>
-                          ))}
+                          <div className="inline-flex space-x-4 w-full min-w-max">
+                            {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
+                              <div key={`wg2-${rowIndex}`} className="flex flex-col">
+                                {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                                  <div key={sensor.id} className="w-40 h-24">
+                                    <SensorCard sensor={sensor} />
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
 
+                          </div>
                         </div>
                       </div>
+
+
+
+
                     </div>
-
-
-
-
                   </div>
                 </div>
                 <button
                   onClick={scrollRight}
-                  className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 bg-white/80 hover:bg-white text-gray-800 rounded-full w-8 h-8 flex items-center justify-center shadow-md transition-all duration-200 hover:scale-110 ${scrollContainerRef.current && scrollPosition >= (scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth - 10) ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                  aria-label="Scroll right"
+                  className="absolute right-0 top-1/2 z-10 p-2 bg-white rounded-full shadow transform -translate-y-1/2 hover:bg-gray-200"
+                  style={{ marginRight: '8px' }}
+                  aria-label="Scroll Right"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5 15.75 12l7.5 7.5-7.5 7.5" />
-                  </svg>
+                  &#8594;
                 </button>
               </div>
             </div>
@@ -460,20 +492,20 @@ const Dashboard = () => {
             <ModelViewer modelPath="/side_shell.glb" />
           </Suspense>
         </div>
-        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch p-4 rounded-2xl border border-gray-100 shadow-md backdrop-blur-sm   bg-white/30 xl:flex-row xl:order-3">
-          <div className="w-full rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch p-4 rounded-2xl border border-gray-100 shadow-md backdrop-blur-sm bg-white/30 xl:flex-row xl:order-3">
+          <div className="overflow-hidden w-full bg-white rounded-2xl border border-gray-200 shadow-sm">
             <div className="overflow-x-auto overflow-y-auto h-96 md:h-full scrollbar-custom">
-              <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
+              <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr className="text-left">
-                    <th rowSpan="2" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">#</th>
-                    <th rowSpan="2" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Time</th>
-                    <th colSpan="3" className="py-3 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider text-center">Temperature Data</th>
+                    <th rowSpan="2" className="px-4 py-3 text-xs font-medium tracking-wider text-gray-600 uppercase">#</th>
+                    <th rowSpan="2" className="px-4 py-3 text-xs font-medium tracking-wider text-gray-600 uppercase">Time</th>
+                    <th colSpan="3" className="px-4 py-3 text-xs font-medium tracking-wider text-center text-gray-600 uppercase">Temperature Data</th>
                   </tr>
                   <tr className="text-left">
-                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Side</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Temp (°C)</th>
-                    <th className="py-2 px-4 text-xs font-medium text-gray-600 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-2 text-xs font-medium tracking-wider text-gray-600 uppercase">Side</th>
+                    <th className="px-4 py-2 text-xs font-medium tracking-wider text-gray-600 uppercase">Temp (°C)</th>
+                    <th className="px-4 py-2 text-xs font-medium tracking-wider text-gray-600 uppercase">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -510,40 +542,40 @@ const Dashboard = () => {
 
                     return (
                       <React.Fragment key={`${hourData.index}-${index}`}>
-                        <tr className="group hover:bg-white/20 transition-colors duration-150">
-                          <td rowSpan="2" className="py-3 px-4 text-sm font-medium text-gray-800 border-r border-gray-100">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-white/20 text-gray-700">
+                        <tr className="transition-colors duration-150 group hover:bg-white/20">
+                          <td rowSpan="2" className="px-4 py-3 text-sm font-medium text-gray-800 border-r border-gray-100">
+                            <span className="inline-flex justify-center items-center w-6 h-6 text-gray-700 rounded-full bg-white/20">
                               {index + 1}
                             </span>
                           </td>
-                          <td rowSpan="2" className="py-3 px-4 text-sm font-medium text-gray-700 border-r border-gray-100">
+                          <td rowSpan="2" className="px-4 py-3 text-sm font-medium text-gray-700 border-r border-gray-100">
                             <div className="flex flex-col">
-                              <span className="text-gray-900 font-semibold">{hourData.time?.split(' ')[0] || '--'}</span>
+                              <span className="font-semibold text-gray-900">{hourData.time?.split(' ')[0] || '--'}</span>
                               <span className="text-xs text-gray-500">{hourData.time?.split(' ')[1] || ''}</span>
                             </div>
                           </td>
-                          <td className="py-2 px-4 text-sm font-medium text-gray-700">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-700">
                             <span className="inline-flex items-center">
-                              <span className="w-2 h-2 rounded-full bg-blue-500 mr-2"></span>
+                              <span className="mr-2 w-2 h-2 bg-blue-500 rounded-full"></span>
                               ASide
                             </span>
                           </td>
-                          <td className="py-2 px-4 text-sm font-medium text-gray-700">{aSide.temp}°C</td>
-                          <td className="py-2 px-4">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-700">{aSide.temp}°C</td>
+                          <td className="px-4 py-2">
                             <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${aSide.status.class} backdrop-blur-sm`}>
                               {aSide.status.text}
                             </span>
                           </td>
                         </tr>
-                        <tr className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100">
-                          <td className="py-2 px-4 text-sm font-medium text-gray-700">
+                        <tr className="border-b border-gray-100 transition-colors duration-150 group hover:bg-gray-50">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-700">
                             <span className="inline-flex items-center">
-                              <span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
+                              <span className="mr-2 w-2 h-2 bg-amber-500 rounded-full"></span>
                               BSide
                             </span>
                           </td>
-                          <td className="py-2 px-4 text-sm font-medium text-gray-700">{bSide.temp}°C</td>
-                          <td className="py-2 px-4">
+                          <td className="px-4 py-2 text-sm font-medium text-gray-700">{bSide.temp}°C</td>
+                          <td className="px-4 py-2">
                             <span className={`px-3 py-1 inline-flex text-xs font-medium rounded-full ${bSide.status.class} backdrop-blur-sm`}>
                               {bSide.status.text}
                             </span>
@@ -581,11 +613,11 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.maxTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.maxTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.maxTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.maxTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
@@ -603,11 +635,11 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.minTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.minTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.minTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.minTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
@@ -625,11 +657,11 @@ const Dashboard = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.ASide.avgTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.avgTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">ASide</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
-                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats.BSide.avgTemp}</p>
+                    <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.avgTemp ?? '--'}</p>
                     <p className="text-xs text-gray-500">BSide</p>
                   </div>
                 </div>
@@ -721,7 +753,7 @@ const Dashboard = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowLegendPopup(!showLegendPopup)}
-                  className="px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-md border border-blue-100 transition-colors hover:bg-blue-100 flex items-center gap-1"
+                  className="flex gap-1 items-center px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-md border border-blue-100 transition-colors hover:bg-blue-100"
                 >
                   <span>Legend</span>
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -730,8 +762,8 @@ const Dashboard = () => {
                 </button>
                 {showLegendPopup && (
                   <div className="absolute right-0 top-8 z-10 p-3 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
-                    <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">Sensors</h4>
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    <h4 className="px-1 mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">Sensors</h4>
+                    <div className="overflow-y-auto pr-1 space-y-2 max-h-60">
                       {sensors
                         .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
                         .map((sensor, index) => {
@@ -750,7 +782,7 @@ const Dashboard = () => {
                               }}
                               title={isHidden ? 'Show sensor' : 'Hide sensor'}
                             >
-                              <div className="mr-2 flex-shrink-0">
+                              <div className="flex-shrink-0 mr-2">
                                 <div
                                   className="w-3 h-3 rounded-full"
                                   style={{
@@ -761,7 +793,7 @@ const Dashboard = () => {
                                   }}
                                 />
                               </div>
-                              <span className={`truncate ${isHidden ? 'line-through text-gray-500' : 'text-gray-700'}`}>
+                              <span className={`truncate ${isHidden ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
                                 Sensor{index + 1}
                               </span>
                             </div>

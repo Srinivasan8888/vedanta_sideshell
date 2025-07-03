@@ -505,15 +505,26 @@ class ApiController {
       ].filter(Boolean);
 
       // 2. Get historical data (from getDashboardchart)
-      const timeRange = this._calculateTimeRange(interval);
-      const startTime = timeRange.startTime;
-      const endTime = timeRange.endTime;
-
-      // Get historical data for both waveguides
-      const [historicalWG1, historicalWG2] = await Promise.all([
-        this._fetchHistoricalData(id, 'WG1', startTime, endTime),
-        this._fetchHistoricalData(id, 'WG2', startTime, endTime)
-      ]);
+      let historicalWG1, historicalWG2;
+      let startTime, endTime;
+      if (interval === 'Live') {
+        // Only fetch the latest record for each waveguide
+        historicalWG1 = await sensormodel.findOne({ id, waveguide: 'WG1' }).sort({ updatedAt: -1 }).lean();
+        historicalWG2 = await sensormodel.findOne({ id, waveguide: 'WG2' }).sort({ updatedAt: -1 }).lean();
+        // Wrap in array to match expected structure
+        historicalWG1 = historicalWG1 ? { sensorData: [{ dataPoints: [historicalWG1] }], stats: {/*...*/ } } : null;
+        historicalWG2 = historicalWG2 ? { sensorData: [{ dataPoints: [historicalWG2] }], stats: {/*...*/ } } : null;
+        const latestTime = latestWG1?.updatedAt || latestWG2?.updatedAt || new Date();
+        startTime = endTime = new Date(latestTime);
+      } else {
+        const timeRange = this._calculateTimeRange(interval);
+        startTime = timeRange.startTime;
+        endTime = timeRange.endTime;
+        [historicalWG1, historicalWG2] = await Promise.all([
+          this._fetchHistoricalData(id, 'WG1', startTime, endTime),
+          this._fetchHistoricalData(id, 'WG2', startTime, endTime)
+        ]);
+      }
 
       // 3. Get hourly average data (from getAvgTable)
       const now = new Date();
@@ -2100,14 +2111,14 @@ class ApiController {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
       const { sensorId, sides: side, interval } = req.query;
-  
+
       // Validate required parameters
       if (!sensorId || !side || !interval) {
         return res.status(400).json({
           error: 'Missing required parameters: sensorId, side, and interval are required'
         });
       }
-  
+
       // Validate side parameter
       const validSides = ['Aside', 'Bside'];
       if (!validSides.includes(side)) {
@@ -2115,7 +2126,7 @@ class ApiController {
           error: 'Invalid side parameter. Must be "Aside" or "Bside"'
         });
       }
-  
+
       // Validate sensorId format (sensor1 to sensor38)
       const sensorNum = parseInt(sensorId.replace('sensor', ''));
       if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
@@ -2123,11 +2134,11 @@ class ApiController {
           error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
         });
       }
-  
+
       // Calculate time range based on interval
       let timeRange = new Date();
       let maxDataPoints = 1000;
-  
+
       switch (interval) {
         case '30Min':
           timeRange.setMinutes(timeRange.getMinutes() - 30);
@@ -2162,10 +2173,10 @@ class ApiController {
             error: 'Invalid interval. Valid values are: 30Min, 1H, 12H, 1D, 1W, 1M, 6M'
           });
       }
-  
+
       // Map side to waveguide
       const waveguide = side === 'Aside' ? 'WG1' : 'WG2';
-  
+
       // Validate user ID
       if (!id) {
         return res.status(400).json({
@@ -2179,23 +2190,25 @@ class ApiController {
         waveguide,
         createdAt: { $gte: timeRange }
       };
-  
+
       // Check total count
       const totalCount = await sensormodel.countDocuments(query);
-  
+
       let sensorData;
-  
+
       // For larger datasets, use sampling
       if (totalCount > maxDataPoints) {
         // Use aggregation to sample data
         const pipeline = [
-          { $match: {
-            id: id,
-            waveguide: waveguide,
-            createdAt: { $gte: timeRange }
-          }},
+          {
+            $match: {
+              id: id,
+              waveguide: waveguide,
+              createdAt: { $gte: timeRange }
+            }
+          },
           { $sort: { createdAt: 1 } },
-          { 
+          {
             $group: {
               _id: null,
               docs: { $push: "$$ROOT" },
@@ -2229,7 +2242,7 @@ class ApiController {
           { $replaceRoot: { newRoot: "$sampledDocs" } },
           { $sort: { createdAt: 1 } }
         ];
-  
+
         sensorData = await sensormodel.aggregate(pipeline);
       } else {
         // For smaller datasets, fetch normally
@@ -2237,13 +2250,13 @@ class ApiController {
           .sort({ createdAt: 1 })
           .lean();
       }
-  
+
       if (!sensorData || sensorData.length === 0) {
         return res.status(404).json({
           message: 'No data found for the given parameters'
         });
       }
-  
+
       const result = {
         sensorId,
         side,
@@ -2252,16 +2265,16 @@ class ApiController {
         totalAvailable: totalCount,
         data: sensorData.map((entry) => {
           const sensorValue = entry[sensorId];
-  
+
           return {
             timestamp: entry.createdAt,
             value: sensorValue !== undefined && sensorValue !== null ? Number(sensorValue) : null
           };
         }).filter(item => item.value !== null) // Remove entries with null values
       };
-  
+
       res.json(result);
-  
+
     } catch (error) {
       console.error('Error in getCollectorbar:', error);
       res.status(500).json({
