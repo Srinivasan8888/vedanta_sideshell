@@ -295,9 +295,10 @@ const User = () => {
   // Handle form submission for both create and update
   const handleSubmit = async (event) => {
     event.preventDefault();
+    const currentUserRole = localStorage.getItem('role');
 
-    // If not in edit mode (i.e., creating new user), check user limit
-    if (!isEditMode) {
+    // If not in edit mode (i.e., creating new user) and not a superadmin, check user limit
+    if (!isEditMode && currentUserRole !== 'superadmin') {
       try {
         // First, fetch the current users to check the count of regular users
         const [usersResponse, limitsResponse] = await Promise.all([
@@ -398,7 +399,7 @@ const User = () => {
   };
 
   return (
-    <div className="flex flex-col w-full h-full">
+    <div className="flex flex-col w-full h-full overflow-hidden">
       <Toaster position="top-right" richColors />
       <div className="flex flex-col justify-between md:flex-row">
         <div className="flex items-start justify-start gap-5 p-4">

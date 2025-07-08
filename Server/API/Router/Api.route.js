@@ -15,7 +15,10 @@ router.get('/getReportPerData',  apiController.reportPerData);
 router.get('/getReportDateData',  apiController.reportDateData);
 router.get('/getReportCountData', apiController.reportCountData);
 router.get('/getHeatmap', apiController.heatmapData);
-router.get('/getCollectorbar', apiController.getCollectorbar);
+router.get('/getCollectorbar', apiController.getSensorData);
+router.get('thresholds', apiController.getThresholds);
+router.post('thresholds', apiController.setThreshold);
+
 // router.get('/getAside', verifyAccessToken, ApiController.Aside);
 // router.get('/getBside', verifyAccessToken, ApiController.Bside);
 // router.get('/getcollectorbar', verifyAccessToken, ApiController.collectorbar);

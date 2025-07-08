@@ -34,7 +34,7 @@ router.get('/getUsers', getUsers)
 router.get('/getAllAlerts', getAllAlerts)
 router.get('/getAlertsByDateRange', getAlertsByDateRange)
 router.get('/getUserLogs', getUserLogs)
-// router.get('/getAllDevices', getAllDevices)
+router.get('/getAllDevices', getAllDevices)
 
 //update request
 router.put('/updateReport', updateReport)

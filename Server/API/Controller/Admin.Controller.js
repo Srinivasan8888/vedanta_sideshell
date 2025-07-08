@@ -635,6 +635,40 @@ export const getLimitsValue = async (req, res) => {
     }
 }
 
+export const getAllDevices = async (req, res) => {
+    try {
+        // Fetch all devices, sorted by timestamp (newest first)
+        const devices = await DeviceId.find()
+            .sort({ timestamp: -1 })
+            .select('_id deviceId timestamp');
+
+        if (!devices || devices.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No devices found',
+                data: []
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Devices retrieved successfully',
+            data: devices.map(device => ({
+                id: device._id,
+                deviceId: device.deviceId,
+                timestamp: device.timestamp
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching devices:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error',
+            error: error.message
+        });
+    }
+};
+
 // export const getAllDevices = async (req, res) => {
 //     try {
 //         // Fetch all devices, sorted by timestamp (newest first)

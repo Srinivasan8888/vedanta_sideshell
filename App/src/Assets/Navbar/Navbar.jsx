@@ -1,4 +1,4 @@
-import React, { useState, Fragment, useMemo, memo } from 'react';
+import React, { useState, useEffect, Fragment, useMemo, memo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IoMdSettings, IoMdLogOut } from 'react-icons/io';
 import { IoNotifications } from 'react-icons/io5';
@@ -8,10 +8,10 @@ import axios from 'axios';
 import logo from '../../Assets/images/Vedanta-Logo.png';
 import xyma_logo from '../../Assets/images/Xyma-Logo.png';
 
-// Constants
-const DEVICE_LIST = [
-  { id: 1, name: 'XY001' },
-];
+// // Constants
+// const DEVICE_LIST = [
+//   { id: 1, name: 'XY001' },
+// ];
 
 // Icons
 const Icons = {
@@ -75,21 +75,48 @@ const SvgIcon = ({ icon, className = 'w-5 h-5', ...props }) => (
 );
 
 const Navbar = () => {
-  const [selectedPerson, _setSelectedPerson] = useState(() => {
-    // Load the saved device from localStorage or default to the first device
-    const savedDeviceId = localStorage.getItem('id');
-    return savedDeviceId 
-      ? DEVICE_LIST.find(device => device.id === Number(savedDeviceId)) || DEVICE_LIST[0]
-      : DEVICE_LIST[0];
-  });
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, _setSelectedDevice] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Custom setter that updates both state and localStorage
-  const setSelectedPerson = (device) => {
-    _setSelectedPerson(device);
-    if (device && device.id) {
-      localStorage.setItem('id', device.id.toString());
+  // Fetch devices on component mount
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_SERVER_URL}api/admin/getAllDevices`);
+        if (response.data.success) {
+          // Create device list and reverse it to show most recent first
+          const deviceList = response.data.data
+            .map(device => ({
+              id: device.deviceId,
+              name: device.deviceId
+            }))
+            .reverse(); // Reverse the array to show most recent first
+          
+          setDevices(deviceList);
+          
+          // Set the first (most recent) device as selected if available
+          if (deviceList.length > 0) {
+            _setSelectedDevice(deviceList[0]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDevices();
+  }, []);
+
+  // Update local storage when selected device changes
+  useEffect(() => {
+    if (selectedDevice) {
+      localStorage.setItem('id', selectedDevice.id);
     }
-  };
+  }, [selectedDevice]);
+
   const [query, setQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -140,12 +167,11 @@ const Navbar = () => {
   ];
 
 
-  const filteredPeople =
-    query === ''
-      ? DEVICE_LIST
-      : DEVICE_LIST.filter((person) => {
-        return person.name.toLowerCase().includes(query.toLowerCase())
-      })
+  const filteredPeople = query === ''
+    ? devices
+    : devices.filter((device) => {
+        return device.name.toLowerCase().includes(query.toLowerCase());
+      });
 
 
   return (
@@ -160,12 +186,12 @@ const Navbar = () => {
               </Link>
             </div>
             <div className="relative w-full sm:w-auto flex lg:hidden">
-              <Combobox value={selectedPerson} onChange={setSelectedPerson}>
+              <Combobox value={selectedDevice} onChange={_setSelectedDevice}>
                 {({ open }) => (
                   <>
                     <div className="relative w-36">
                       <Combobox.Button className="relative w-full cursor-default rounded-lg bg-gray-800 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                        <span className="block truncate text-gray-300">{selectedPerson?.name || 'Select a person'}</span>
+                        <span className="block truncate text-gray-300">{selectedDevice?.name || 'Select a device'}</span>
                         <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                           <svg
                             className="h-5 w-5 text-gray-400"
@@ -273,12 +299,12 @@ const Navbar = () => {
                 ))}
 
                 <div className="relative w-full sm:w-auto">
-                  <Combobox value={selectedPerson} onChange={setSelectedPerson}>
+                  <Combobox value={selectedDevice} onChange={_setSelectedDevice}>
                     {({ open }) => (
                       <>
                         <div className="relative w-36">
                           <Combobox.Button className="relative w-full cursor-default rounded-lg bg-gray-800 py-2 pl-3 pr-10 text-left shadow-md focus:outline-none focus-visible:border-indigo-500 focus-visible:ring-2 focus-visible:ring-white/75 focus-visible:ring-offset-2 focus-visible:ring-offset-orange-300 sm:text-sm">
-                            <span className="block truncate text-gray-300">{selectedPerson?.name || 'Select a person'}</span>
+                            <span className="block truncate text-gray-300">{selectedDevice?.name || 'Select a device'}</span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2">
                               <svg
                                 className="h-5 w-5 text-gray-400"

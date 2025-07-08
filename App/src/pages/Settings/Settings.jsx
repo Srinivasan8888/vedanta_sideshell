@@ -223,13 +223,12 @@ const Settings = () => {
   const isAdminUser = userData && (userData.role === 'admin' || userData.role === 'superadmin');
 
   return (
-    <div className="min-h-screen ">
-      {!isAdminUser && <Navbar onLogout={() => {}} />}
+    <div className="min-h-screen overflow-hidden">
       
-      <div className="flex">
+      <div className="flex ">
         {isAdminUser && <Adminsidebar />}
         
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 ">
           {/* Welcome Card */}
           <div className="bg-[#101010]/90 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg overflow-hidden mb-8">
             <div className="p-6">
@@ -317,14 +316,14 @@ const Settings = () => {
                 </div>
               </div>
               
-              <div className="mt-8 flex justify-end">
+              {/* <div className="mt-8 flex justify-end">
                 <button className="px-6 py-2.5 bg-blue-700 text-white font-medium text-sm leading-tight rounded-md shadow-md hover:bg-blue-600 hover:shadow-lg focus:bg-blue-700 focus:shadow-lg focus:outline-none focus:ring-0 active:bg-blue-800 active:shadow-lg transition duration-150 ease-in-out flex items-center border border-blue-500/30">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Edit Profile
                 </button>
-              </div>
+              </div> */}
             </div>
           </div>
         </main>
