@@ -904,8 +904,13 @@ class ApiController {
 
       // Calculate time range in minutes
       const endTime = new Date(latestTime);
+      
+      // Set end time to 11:59:59 PM
+      endTime.setHours(23, 59, 59, 999);
+      
+      // Set start time to 12:00:01 AM
       const startTime = new Date(endTime);
-      startTime.setMinutes(endTime.getMinutes() - config.duration);
+      startTime.setHours(0, 0, 1, 0);
 
       // Calculate minutes between data points
       const minutesBetweenPoints = config.duration / config.points;
@@ -1075,9 +1080,15 @@ class ApiController {
         });
       }
 
-      // Convert dates
+     
+      // Convert dates and adjust to full day range
       const start = new Date(startDate);
+      // Set start time to 12:00:01 AM
+      start.setHours(0, 0, 1, 0);
+      
       const end = new Date(endDate);
+      // Set end time to 11:59:59 PM
+      end.setHours(23, 59, 59, 999);
 
       // Validate date range
       if (start >= end) {
@@ -1311,9 +1322,14 @@ class ApiController {
         });
       }
 
-      // Convert dates
+      // Convert dates and adjust to full day range
       const start = new Date(startDate);
+      // Set start time to 12:00:01 AM
+      start.setHours(0, 0, 1, 0);
+      
       const end = new Date(endDate);
+      // Set end time to 11:59:59 PM
+      end.setHours(23, 59, 59, 999);
 
       // Validate date range
       if (start >= end) {
@@ -1493,9 +1509,14 @@ class ApiController {
         });
       }
 
-      // Parse dates
-      const start = new Date(startDate);
-      const end = new Date(endDate);
+     // Parse dates and adjust to full day range
+     const start = new Date(startDate);
+     // Set start time to 12:00:01 AM
+     start.setHours(0, 0, 1, 0);
+     
+     const end = new Date(endDate);
+     // Set end time to 11:59:59 PM
+     end.setHours(23, 59, 59, 999);
 
       // Validate date format
       if (isNaN(start.getTime()) || isNaN(end.getTime())) {
