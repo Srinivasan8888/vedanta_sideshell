@@ -1,7 +1,7 @@
 {
   "files": {
     "main.css": "/static/css/main.53c64b50.css",
-    "main.js": "/static/js/main.2af8f1f0.js",
+    "main.js": "/static/js/main.42b53de6.js",
     "static/js/694.743cb2a9.chunk.js": "/static/js/694.743cb2a9.chunk.js",
     "static/js/453.66f35247.chunk.js": "/static/js/453.66f35247.chunk.js",
     "static/js/520.e5538dbc.chunk.js": "/static/js/520.e5538dbc.chunk.js",
@@ -13,13 +13,13 @@
     "static/media/Vedanta-Logo.png": "/static/media/Vedanta-Logo.0411bd0fdb07b2eadec7.png",
     "index.html": "/index.html",
     "main.53c64b50.css.map": "/static/css/main.53c64b50.css.map",
-    "main.2af8f1f0.js.map": "/static/js/main.2af8f1f0.js.map",
+    "main.42b53de6.js.map": "/static/js/main.42b53de6.js.map",
     "694.743cb2a9.chunk.js.map": "/static/js/694.743cb2a9.chunk.js.map",
     "453.66f35247.chunk.js.map": "/static/js/453.66f35247.chunk.js.map",
     "520.e5538dbc.chunk.js.map": "/static/js/520.e5538dbc.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.53c64b50.css",
-    "static/js/main.2af8f1f0.js"
+    "static/js/main.42b53de6.js"
   ]
 }
