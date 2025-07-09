@@ -37,7 +37,7 @@ const Signup = () => {
       }
       try {
         const response = await API.post(
-          `${process.env.REACT_APP_SERVER_URL}auth/register`,
+          `${process.env.REACT_APP_SERVER_URL}api/auth/register`,
           {
             name,
             email,

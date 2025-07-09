@@ -4,7 +4,7 @@ import {
     updateReport, getColorRangeModel, updateUser, deleteUser, getUserDetails,
     updateAlert, deleteAlert, createSetAlert, getCombinedAlertAndFrequency, updateDevice, deleteDevice, createDevice,
     getLimitsValue, createLimitsValue, getAlertsByDateRange, getUserLogs, getAllAlerts, getUserAlertRange, SaveAlertRange,
-    SetAlertFrequency, getAlertFrequency, AlertfreqUsers, alertFrequency, reportUsers, getFrequency, getUsers
+    SetAlertFrequency, getAlertFrequency, AlertfreqUsers, alertFrequency, reportUsers, getFrequency, getUsers, getAllDevices
 } from '../Controller/Admin.Controller.js';
 
 const router = express.Router();

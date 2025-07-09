@@ -1,5 +1,5 @@
 import sensormodel from "../Models/sensorModel.js";
-import devicemodel from '../Models/devicemodel.js';
+import devicemodel from '../Models/Deviceid.js';
 import Threshold from '../Models/Threshold.model.js';
 
 // Helper function to filter out null/undefined/"null" values from an object
