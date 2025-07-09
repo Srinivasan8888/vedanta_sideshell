@@ -75,7 +75,7 @@ const MainLayout = () => {
   const verifyAndRefreshToken = async () => {
     try {
       // Initial check with current access token
-      await API.get(`${process.env.REACT_APP_SERVER_URL}auth/access-token`, {
+      await API.get(`${process.env.REACT_APP_SERVER_URL}api/auth/access-token`, {
         headers: { 
           Authorization: `Bearer ${localStorage.getItem('accessToken')}` 
         }
@@ -92,7 +92,7 @@ const MainLayout = () => {
 
           // Generate new access token using refresh token
           const response = await API.post(
-            `${process.env.REACT_APP_SERVER_URL}auth/access-token-generate`,
+            `${process.env.REACT_APP_SERVER_URL}/api/auth/access-token-generate`,
             { refreshToken }
           );
 

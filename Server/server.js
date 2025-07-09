@@ -51,7 +51,7 @@ app.get('/', verifyAccessToken, async (req, res, next) => {
    res.send('backend is running')
 })
 
-app.use('/auth', AuthRoute);
+app.use('/api/auth', AuthRoute);
 app.use('/api/v1', InsertRoute);
 app.use('/api/v2', ApiRoute);
 app.use('/api/admin', AdminRoute);
