@@ -29,7 +29,7 @@ const ProtectedAdminRoute = ({ children }) => {
         return;
       }
 
-      const response = await API.post(`${process.env.REACT_APP_SERVER_URL}auth/get-role`, {
+      const response = await API.post(`${process.env.REACT_APP_SERVER_URL}api/auth/get-role`, {
         email: userEmail
       });
       
@@ -72,7 +72,7 @@ const ProtectedAdminRoute = ({ children }) => {
   
       try {
         // Verify access token
-        await API.get(`${process.env.REACT_APP_SERVER_URL}auth/access-token`, {
+        await API.get(`${process.env.REACT_APP_SERVER_URL}api/auth/access-token`, {
           headers: { 
             Authorization: `Bearer ${accessToken}`,
             'Cache-Control': 'no-cache',
@@ -87,7 +87,7 @@ const ProtectedAdminRoute = ({ children }) => {
           console.log('Access token expired, attempting refresh...');
           try {
             const refreshResponse = await API.post(
-              `${process.env.REACT_APP_SERVER_URL}auth/access-token-generate`,
+              `${process.env.REACT_APP_SERVER_URL}api/auth/access-token-generate`,
               { refreshToken }
             );
   

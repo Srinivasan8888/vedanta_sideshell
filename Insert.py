@@ -21,8 +21,9 @@ def generate_sensor_data(waveguide):
 def send_data(url, data):
     """Send data to the API endpoint"""
     try:
+        print(f"Sending data to URL: {url}")
         response = requests.post(url, params=data)
-        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Sent data for {data['waveguide']}")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Sent data for {data['waveguide']} to {url}")
         print(f"Status: {response.status_code}")
         print(f"Response: {response.text}")
         return True
@@ -32,7 +33,7 @@ def send_data(url, data):
 
 def main():
     # API endpoint
-    url = "http://localhost:4000/api/v1/createSensor"
+    url = "https://vedanta.xyma.live/api/v1/createSensor"
     
     # Run indefinitely
     while True:
