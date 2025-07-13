@@ -1,9 +1,8 @@
 {
   "files": {
     "main.css": "/static/css/main.832edfc5.css",
-    "main.js": "/static/js/main.cbc155fc.js",
+    "main.js": "/static/js/main.d115d7bf.js",
     "static/js/694.743cb2a9.chunk.js": "/static/js/694.743cb2a9.chunk.js",
-    "static/js/453.66f35247.chunk.js": "/static/js/453.66f35247.chunk.js",
     "static/js/520.e5538dbc.chunk.js": "/static/js/520.e5538dbc.chunk.js",
     "static/media/bg.png": "/static/media/bg.562da04c23da4c6128a3.png",
     "static/media/Vector.svg": "/static/media/Vector.baf97ca7670b181d66849a68d353d9ec.svg",
@@ -13,13 +12,12 @@
     "static/media/nalco.jpg": "/static/media/nalco.2c0af2ae1cfb20c1a003.jpg",
     "index.html": "/index.html",
     "main.832edfc5.css.map": "/static/css/main.832edfc5.css.map",
-    "main.cbc155fc.js.map": "/static/js/main.cbc155fc.js.map",
+    "main.d115d7bf.js.map": "/static/js/main.d115d7bf.js.map",
     "694.743cb2a9.chunk.js.map": "/static/js/694.743cb2a9.chunk.js.map",
-    "453.66f35247.chunk.js.map": "/static/js/453.66f35247.chunk.js.map",
     "520.e5538dbc.chunk.js.map": "/static/js/520.e5538dbc.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.832edfc5.css",
-    "static/js/main.cbc155fc.js"
+    "static/js/main.d115d7bf.js"
   ]
 }
