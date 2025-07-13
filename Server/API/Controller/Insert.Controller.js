@@ -43,57 +43,33 @@ export const createSensor = async (req, res) => {
     sensor36,
     sensor37,
     sensor38,
+    TIME,
     time,
   } = req.query;
 
   // Validate required fields
-  if (
-    !id ||
-    !waveguide ||
-    !sensor1 ||
-    !sensor2 ||
-    !sensor3 ||
-    !sensor4 ||
-    !sensor5 ||
-    !sensor6 ||
-    !sensor7 ||
-    !sensor8 ||
-    !sensor9 ||
-    !sensor10 ||
-    !sensor11 ||
-    !sensor12 ||
-    !sensor13 ||
-    !sensor14 ||
-    !sensor15 ||
-    !sensor16 ||
-    !sensor17 ||
-    !sensor18 ||
-    !sensor19 ||
-    !sensor20 ||
-    !sensor21 ||
-    !sensor22 ||
-    !sensor23 ||
-    !sensor24 ||
-    !sensor25 ||
-    !sensor26 ||
-    !sensor27 ||
-    !sensor28 ||
-    !sensor29 ||
-    !sensor30 ||
-    !sensor31 ||
-    !sensor32 ||
-    !sensor33 ||
-    !sensor34 ||
-    !sensor35 ||
-    !sensor36 ||
-    !sensor37 ||
-    !sensor38 ||
-    !time
-  ) {
+  const requiredFields = [id, waveguide, TIME];
+  if (requiredFields.some(field => !field)) {
     return res.status(400).json({
-      error: "All fields are required.",
+      error: "id, waveguide, and TIME are required fields.",
     });
   }
+
+  // Convert N/A values to null
+  const sensorFields = {
+    sensor1, sensor2, sensor3, sensor4, sensor5, sensor6, sensor7, sensor8,
+    sensor9, sensor10, sensor11, sensor12, sensor13, sensor14, sensor15, sensor16,
+    sensor17, sensor18, sensor19, sensor20, sensor21, sensor22, sensor23, sensor24,
+    sensor25, sensor26, sensor27, sensor28, sensor29, sensor30, sensor31, sensor32,
+    sensor33, sensor34, sensor35, sensor36, sensor37, sensor38
+  };
+
+  // Convert N/A values to null
+  Object.keys(sensorFields).forEach(key => {
+    if (sensorFields[key] === 'N/A') {
+      sensorFields[key] = null;
+    }
+  });
 
   try {
     const newSensor = new SensorModel({
@@ -137,7 +113,7 @@ export const createSensor = async (req, res) => {
       sensor36: String(sensor36),
       sensor37: String(sensor37),
       sensor38: String(sensor38),
-      TIME: String(time),
+      TIME: String(TIME),
     });
 
     // Save to the database
@@ -167,7 +143,7 @@ export const CreateAvg = async (req, res) => {
     const newSensor = new AverageModel({
       id: String(id),
       Avgtemp: String(Avgtemp),
-      TIME: String(time),
+      TIME: String(TIME),
     });
     const savedSensor = await newSensor.save();
 
