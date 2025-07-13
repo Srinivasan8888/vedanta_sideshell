@@ -433,11 +433,13 @@ const Dashboard = () => {
               <div className="relative">
                 <button
                   onClick={scrollLeft}
-                  className="absolute left-0 top-1/2 z-10 p-2 bg-white rounded-full shadow transform -translate-y-1/2 hover:bg-gray-200"
+                  className="absolute left-0 top-1/2 z-10 flex items-center justify-center w-10 h-10 bg-white/50 backdrop-blur-sm rounded-full shadow-md transform -translate-y-1/2 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 ease-in-out"
                   style={{ marginLeft: '8px' }}
                   aria-label="Scroll Left"
                 >
-                  &#8592;
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                  </svg>
                 </button>
 
                 <div
@@ -475,11 +477,13 @@ const Dashboard = () => {
 
                 <button
                   onClick={scrollRight}
-                  className="absolute right-0 top-1/2 z-10 p-2 bg-white rounded-full shadow transform -translate-y-1/2 hover:bg-gray-200"
+                  className="absolute right-0 top-1/2 z-10 flex items-center justify-center w-10 h-10 bg-white/50 backdrop-blur-sm rounded-full shadow-md transform -translate-y-1/2 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 ease-in-out"
                   style={{ marginRight: '8px' }}
                   aria-label="Scroll Right"
                 >
-                  &#8594;
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                  </svg>
                 </button>
               </div>
             </div>

@@ -1,4 +1,4 @@
-import { createClient } from 'redis';
+import redis from 'redis';
 import dotenv from 'dotenv';
 
 dotenv.config(); // Load environment variables from .env file
@@ -7,29 +7,33 @@ let client;
 let isConnected = false;
 
 const initRedis = async () => {
-  client = createClient({
-    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
-  });
+  try {
+    client = redis.createClient({
+      host: process.env.REDIS_HOST,
+      port: parseInt(process.env.REDIS_PORT)
+    });
 
-  client.on('connect', () => {
-    console.log('Client connected to Redis...');
-  });
+    client.on('connect', () => {
+      console.log('Client connected to Redis...');
+      isConnected = true;
+    });
 
-  client.on('ready', () => {
-    console.log('Client ready to use...');
-    isConnected = true;
-  });
+    client.on('ready', () => {
+      console.log('Client ready to use...');
+    });
 
-  client.on('error', (err) => {
-    console.error('Redis error:', err.message);
-  });
+    client.on('error', (err) => {
+      console.error('Redis error:', err.message);
+    });
 
-  client.on('end', () => {
-    console.log('Client disconnected');
-    isConnected = false;
-  });
-
-  await client.connect();
+    client.on('end', () => {
+      console.log('Client disconnected');
+      isConnected = false;
+    });
+  } catch (err) {
+    console.error('Failed to connect to Redis:', err);
+    throw err;
+  }
   return client;
 };
 
