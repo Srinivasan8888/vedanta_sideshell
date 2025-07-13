@@ -5,7 +5,9 @@ import { IoNotifications } from 'react-icons/io5';
 import { Combobox, Transition } from '@headlessui/react';
 import axios from 'axios';
 // Assets
-import logo from '../../Assets/images/Vedanta-Logo.png';
+
+// import logo from '../../Assets/images/Vedanta-Logo.png';
+import logo from '../../Assets/images/nalco.jpg';
 import xyma_logo from '../../Assets/images/Xyma-Logo.png';
 
 // // Constants

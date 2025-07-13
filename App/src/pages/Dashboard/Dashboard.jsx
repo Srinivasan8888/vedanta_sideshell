@@ -45,6 +45,11 @@ const SensorCard = React.memo(
   function SensorCard({ sensor }) {
     const navigate = useNavigate();
 
+    // Don't render if sensor value is 'N/A' or undefined
+    if (sensor.value === 'N/A' || sensor.value === undefined) {
+      return null;
+    }
+
     const handleNavigate = () => {
       // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
       const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
@@ -216,17 +221,20 @@ const Dashboard = () => {
 
   const scrollLeft = useCallback(() => {
     if (scrollContainerRef.current) {
-      const newPosition = Math.max(0, scrollPosition - scrollAmount);
+      const current = scrollContainerRef.current.scrollLeft;
+      const newPosition = Math.max(0, current - scrollAmount);
       scrollContainerRef.current.scrollTo({
         left: newPosition,
+        behavior: 'smooth',
       });
     }
   }, [scrollAmount]);
 
   const scrollRight = useCallback(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({
-        left: scrollAmount,
+      const current = scrollContainerRef.current.scrollLeft;
+      scrollContainerRef.current.scrollTo({
+        left: current + scrollAmount,
         behavior: 'smooth',
       });
     }
@@ -264,39 +272,39 @@ const Dashboard = () => {
         };
 
         if (timeInterval === 'Live') {
-  // Use functional form to avoid stale state
-  setAccumulatedData(prev => {
-    const existingATimestamps = new Set(prev.ASide.map(e => e.timestamp || e.TIME));
-    const existingBTimestamps = new Set(prev.BSide.map(e => e.timestamp || e.TIME));
+          // Use functional form to avoid stale state
+          setAccumulatedData(prev => {
+            const existingATimestamps = new Set(prev.ASide.map(e => e.timestamp || e.TIME));
+            const existingBTimestamps = new Set(prev.BSide.map(e => e.timestamp || e.TIME));
 
-    const transformEntry = (entry) => {
-      const sensors = {};
-      Object.keys(entry).forEach(key => {
-        if (key.startsWith('sensor')) {
-          sensors[key] = Number(entry[key]);
-        }
-      });
-      return {
-        timestamp: entry.timestamp || entry.TIME,
-        sensors
-      };
-    };
+            const transformEntry = (entry) => {
+              const sensors = {};
+              Object.keys(entry).forEach(key => {
+                if (key.startsWith('sensor')) {
+                  sensors[key] = Number(entry[key]);
+                }
+              });
+              return {
+                timestamp: entry.timestamp || entry.TIME,
+                sensors
+              };
+            };
 
-    const uniqueASide = newData.ASide
-      .filter(e => !(existingATimestamps.has(e.timestamp || e.TIME)))
-      .map(transformEntry);
-    const uniqueBSide = newData.BSide
-      .filter(e => !(existingBTimestamps.has(e.timestamp || e.TIME)))
-      .map(transformEntry);
+            const uniqueASide = newData.ASide
+              .filter(e => !(existingATimestamps.has(e.timestamp || e.TIME)))
+              .map(transformEntry);
+            const uniqueBSide = newData.BSide
+              .filter(e => !(existingBTimestamps.has(e.timestamp || e.TIME)))
+              .map(transformEntry);
 
-    const updatedData = {
-      ASide: [...prev.ASide, ...uniqueASide],
-      BSide: [...prev.BSide, ...uniqueBSide]
-    };
-    setChartHistoricalData(updatedData);
-    return updatedData;
-  });
-} else {
+            const updatedData = {
+              ASide: [...prev.ASide, ...uniqueASide],
+              BSide: [...prev.BSide, ...uniqueBSide]
+            };
+            setChartHistoricalData(updatedData);
+            return updatedData;
+          });
+        } else {
           // For other intervals, replace the data
           setChartHistoricalData(newData);
         }
@@ -421,58 +429,40 @@ const Dashboard = () => {
                 >
                   &#8592;
                 </button>
+
                 <div
                   ref={scrollContainerRef}
-                  className="overflow-x-auto relative flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
+                  className="relative flex-1 overflow-x-auto scrollbar-custom xl:overflow-y-hidden"
                   style={{ scrollBehavior: 'smooth' }}
                   onScroll={handleScroll}
                 >
-                  <div
-                    ref={scrollContainerRef}
-                    className="overflow-x-auto flex-1 px-4 scrollbar-custom xl:overflow-y-hidden"
-                    style={{ scrollBehavior: 'smooth' }}
-                    onScroll={handleScroll}
-                  >
-
-
-                    <div className="w-full">
-
-                      <div>
-                        <div className="overflow-x-auto px-4 -mx-4">
-                          <div className="inline-flex space-x-4 w-full min-w-max">
-                            {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
-                              <div key={`wg1-${rowIndex}`} className="flex flex-col">
-                                {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                                  <div key={sensor.id} className="w-40 h-24">
-                                    <SensorCard sensor={sensor} />
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
+                  <div className="inline-flex space-x-4 w-full min-w-max px-4">
+                    {/* wg1Sensors */}
+                    {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
+                      <div key={`wg1-${rowIndex}`} className="flex flex-col">
+                        {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                          <div key={sensor.id} className="w-40 h-24">
+                            <SensorCard sensor={sensor} />
                           </div>
-
-
-                          <div className="inline-flex space-x-4 w-full min-w-max">
-                            {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
-                              <div key={`wg2-${rowIndex}`} className="flex flex-col">
-                                {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                                  <div key={sensor.id} className="w-40 h-24">
-                                    <SensorCard sensor={sensor} />
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-
-                          </div>
-                        </div>
+                        ))}
                       </div>
+                    ))}
+                     </div>
+                    {/* wg2Sensors */}
+                    <div className="inline-flex space-x-4 w-full min-w-max px-4">
+                    {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
+                      <div key={`wg2-${rowIndex}`} className="flex flex-col">
+                        {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
+                          <div key={sensor.id} className="w-40 h-24">
+                            <SensorCard sensor={sensor} />
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                 </div>
 
-
-
-
-                    </div>
-                  </div>
                 </div>
+
                 <button
                   onClick={scrollRight}
                   className="absolute right-0 top-1/2 z-10 p-2 bg-white rounded-full shadow transform -translate-y-1/2 hover:bg-gray-200"
