@@ -45,11 +45,6 @@ const SensorCard = React.memo(
   function SensorCard({ sensor }) {
     const navigate = useNavigate();
 
-    // Don't render if sensor value is 'N/A' or undefined
-    if (sensor.value === 'N/A' || sensor.value === undefined) {
-      return null;
-    }
-
     const handleNavigate = () => {
       // Extract sensor ID - get just the number from the sensor name (e.g., 'WG2 38' -> '38')
       const sensorNumber = sensor.name.replace(/[^0-9]/g, '');
@@ -317,19 +312,34 @@ const Dashboard = () => {
       const formattedSensors = [];
       realtime.forEach(waveguide => {
         if (!waveguide || !waveguide.sensors) return;
+        
         Object.entries(waveguide.sensors).forEach(([sensorKey, sensorData]) => {
-          if (!sensorData || sensorData.value === undefined) return;
+          // Skip if sensorData is invalid or value is 'N/A'
+          if (!sensorData || sensorData.value === undefined || sensorData.value === 'N/A') {
+            console.log(`Skipping ${sensorKey} - Invalid or N/A value`);
+            return;
+          }
+          
+          // Convert value to number and check if it's valid
+          const numericValue = parseFloat(sensorData.value);
+          if (isNaN(numericValue)) {
+            console.log(`Skipping ${sensorKey} - Not a number:`, sensorData.value);
+            return;
+          }
+          
           const sensorNumber = sensorKey.replace('sensor', '');
           const sidePrefix = waveguide.waveguide === 'WG1' ? 'ASide' : 'BSide';
           const sensorId = `${waveguide.waveguide}+${sensorNumber}`;
+          
           formattedSensors.push({
             id: sensorId,
             name: `${sidePrefix} Sensor ${sensorNumber}`,
-            value: parseFloat(sensorData.value).toFixed(2),
+            value: numericValue.toFixed(2),
             difference: sensorData.difference || '0.00',
             isPositive: sensorData.trend === 'up',
             waveguide: waveguide.waveguide,
-            timestamp: waveguide.TIME || new Date().toISOString()
+            timestamp: waveguide.TIME || new Date().toISOString(),
+            isValid: true
           });
         });
       });
