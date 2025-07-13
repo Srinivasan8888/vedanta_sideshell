@@ -761,45 +761,91 @@ const Dashboard = () => {
                   </svg>
                 </button>
                 {showLegendPopup && (
-                  <div className="absolute right-0 top-8 z-10 p-3 w-48 bg-white rounded-lg border border-gray-200 shadow-lg">
-                    <h4 className="px-1 mb-2 text-xs font-medium tracking-wider text-gray-500 uppercase">Sensors</h4>
-                    <div className="overflow-y-auto pr-1 space-y-2 max-h-60">
-                      {sensors
-                        .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
-                        .map((sensor, index) => {
-                          const sensorId = `AS${index + 1}`; // Changed to match chart filter format
-                          const isHidden = hiddenSensors[sensorId];
-                          return (
-                            <div
-                              key={index}
-                              className={`flex items-center text-xs cursor-pointer p-2 rounded-md hover:bg-gray-50 transition-colors ${isHidden ? 'opacity-40' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setHiddenSensors(prev => ({
-                                  ...prev,
-                                  [sensorId]: !prev[sensorId]
-                                }));
-                              }}
-                              title={isHidden ? 'Show sensor' : 'Hide sensor'}
-                            >
-                              <div className="flex-shrink-0 mr-2">
-                                <div
-                                  className="w-3 h-3 rounded-full"
-                                  style={{
-                                    backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                                    opacity: isHidden ? 0.5 : 0.9,
-                                    transition: 'opacity 0.2s',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                  <div className="absolute right-0 top-8 z-10 w-64 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden">
+                    <div className="p-3 border-b border-gray-100">
+                      <h4 className="text-sm font-medium text-gray-700">
+                        {selectedSide} Sensors
+                        <span className="ml-1 text-xs text-gray-500 font-normal">
+                          ({sensors.filter(s => s.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2')).length} active)
+                        </span>
+                      </h4>
+                    </div>
+                    <div className="overflow-y-auto max-h-80">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sensor</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {sensors
+                            .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                            .map((sensor, index) => {
+                              const sensorId = `AS${index + 1}`;
+                              const isHidden = hiddenSensors[sensorId];
+                              const sensorNumber = sensor.name.split(' ').pop();
+                              
+                              return (
+                                <tr 
+                                  key={sensor.id}
+                                  className={`text-xs cursor-pointer hover:bg-gray-50 ${isHidden ? 'opacity-40' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setHiddenSensors(prev => ({
+                                      ...prev,
+                                      [sensorId]: !prev[sensorId]
+                                    }));
                                   }}
-                                />
-                              </div>
-                              <span className={`truncate ${isHidden ? 'text-gray-500 line-through' : 'text-gray-700'}`}>
-                                Sensor{index + 1}
-                              </span>
-                            </div>
-                          );
-                        }
-                        )}
+                                  title={isHidden ? 'Show sensor' : 'Hide sensor'}
+                                >
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div 
+                                        className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+                                        style={{
+                                          backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
+                                          opacity: isHidden ? 0.5 : 0.9,
+                                          transition: 'opacity 0.2s',
+                                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                        }}
+                                      />
+                                      <span className={`truncate ${isHidden ? 'text-gray-500' : 'text-gray-900'}`}>
+                                        {sensor.name}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    <span className={`font-medium ${isHidden ? 'text-gray-500' : 'text-blue-600'}`}>
+                                      {sensor.value}°C
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                      sensor.isPositive 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {sensor.isPositive ? '↑' : '↓'} {sensor.difference}°C
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="p-2 bg-gray-50 text-right border-t border-gray-100">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowLegendPopup(false);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-800"
+                      >
+                        Close
+                      </button>
                     </div>
                   </div>
                 )}
