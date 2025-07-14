@@ -720,13 +720,13 @@ const Dashboard = () => {
                     ?.filter((hourData) => hourData?.entries?.length > 0)
                     .map((hourData, index) => {
                       const getStatusClass = (temp) => {
-                        if (temp > 35) return "bg-red-400/20 text-red-700";
+                        if (temp > 400) return "bg-red-400/20 text-red-700";
                         if (temp < 25) return "bg-blue-400/20 text-blue-700";
                         return "bg-green-400/20 text-green-700";
                       };
 
                       const getStatusText = (temp) => {
-                        if (temp > 35) return "High";
+                        if (temp > 400) return "High";
                         if (temp < 25) return "Low";
                         return "Normal";
                       };
@@ -1426,7 +1426,7 @@ const Dashboard = () => {
         </div>
 
         <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl border-2 bg-white/30 p-4 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
-          <div className="flex flex-col w-full h-full p-1 rounded-2xl border-2 gap-1 border-white bg-white/5 backdrop-blur-sm md:w-[40%] grid grid-cols-3">
+          <div className=" w-full h-full p-1 rounded-2xl border-2 gap-1 border-white bg-white/5 backdrop-blur-sm md:w-[40%] grid grid-cols-3">
            
               {/* ES1-ES12 */}
               {Array.from({ length: 12 }).map((_, i) => {
