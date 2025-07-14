@@ -1,8 +1,9 @@
 {
   "files": {
-    "main.css": "/static/css/main.617b8c1a.css",
-    "main.js": "/static/js/main.49353312.js",
+    "main.css": "/static/css/main.53c64b50.css",
+    "main.js": "/static/js/main.42b53de6.js",
     "static/js/694.743cb2a9.chunk.js": "/static/js/694.743cb2a9.chunk.js",
+    "static/js/453.66f35247.chunk.js": "/static/js/453.66f35247.chunk.js",
     "static/js/520.e5538dbc.chunk.js": "/static/js/520.e5538dbc.chunk.js",
     "static/media/bg.png": "/static/media/bg.562da04c23da4c6128a3.png",
     "static/media/Vector.svg": "/static/media/Vector.baf97ca7670b181d66849a68d353d9ec.svg",
@@ -11,13 +12,11 @@
     "static/media/Poppins-Regular.ttf": "/static/media/Poppins-Regular.35d26b781dc5fda684cc.ttf",
     "static/media/nalco.jpg": "/static/media/nalco.2c0af2ae1cfb20c1a003.jpg",
     "index.html": "/index.html",
-    "main.617b8c1a.css.map": "/static/css/main.617b8c1a.css.map",
-    "main.49353312.js.map": "/static/js/main.49353312.js.map",
+    "main.53c64b50.css.map": "/static/css/main.53c64b50.css.map",
+    "main.42b53de6.js.map": "/static/js/main.42b53de6.js.map",
     "694.743cb2a9.chunk.js.map": "/static/js/694.743cb2a9.chunk.js.map",
+    "453.66f35247.chunk.js.map": "/static/js/453.66f35247.chunk.js.map",
     "520.e5538dbc.chunk.js.map": "/static/js/520.e5538dbc.chunk.js.map"
   },
-  "entrypoints": [
-    "static/css/main.617b8c1a.css",
-    "static/js/main.49353312.js"
-  ]
+  "entrypoints": ["static/css/main.53c64b50.css", "static/js/main.42b53de6.js"]
 }
