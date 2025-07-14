@@ -8,6 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { FaArrowUp, FaArrowDown } from "react-icons/fa";
+import SensorComparisonCard from "../../components/SensorComparisonCard";
 import { useNavigate } from "react-router-dom";
 import "../../Assets/Navbar/Sidebar.css";
 import {
@@ -826,27 +827,44 @@ const Dashboard = () => {
           </div>
 
           <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-            <div className="flex-shrink-0 border-b border-gray-100 p-2">
-              <div className="flex items-center justify-between">
-                <h5 className="text-sm font-medium text-gray-700">
-                  Temperature Statistics
-                </h5>
-                {liveStatus.timestamp && (
-                  <h3 className="text-sm font-medium text-gray-700">
-                    {" "}
-                    updatedAt: {liveStatus.timestamp || "N/A"}
-                  </h3>
-                )}
-                <div
-                  className={`flex items-center space-x-2 rounded-full px-2.5 py-1 text-xs font-medium ${liveStatus.isLive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
-                >
-                  {liveStatus.isLive ? (
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-green-500"></span>
-                  ) : (
-                    <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+            <div className="flex-shrink-0 border-b border-gray-200 bg-white/80 backdrop-blur-sm p-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center space-x-3">
+                  <div className="p-1.5 rounded-lg bg-blue-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <h5 className="text-base font-semibold text-gray-800">
+                    Temperature Statistics
+                  </h5>
+                </div>
+                
+                <div className="flex items-center space-x-4">
+                  {liveStatus.timestamp && (
+                    <div className="hidden sm:flex items-center text-sm text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Last updated: <span className="font-medium text-gray-700">{liveStatus.timestamp || "N/A"}</span></span>
+                    </div>
                   )}
-                  <div className="flex flex-col items-end">
-                    <span>{liveStatus.isLive ? "Live" : "Inactive"}</span>
+                  
+                  <div
+                    className={`flex items-center space-x-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
+                      liveStatus.isLive 
+                        ? "bg-green-50 text-green-700 border border-green-100" 
+                        : "bg-gray-50 text-gray-600 border border-gray-100"
+                    }`}
+                  >
+                    <span className={`h-2.5 w-2.5 rounded-full ${liveStatus.isLive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                    <span className="font-medium">{liveStatus.isLive ? "Live" : "Inactive"}</span>
+                    {liveStatus.isLive && (
+                      <span className="ml-1.5 flex h-2 w-2">
+                        <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1061,33 +1079,54 @@ const Dashboard = () => {
                 <h3 className="text-lg font-semibold text-gray-800">
                   Temperature Trend
                 </h3>
-                <div className="flex items-center space-x-4">
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="side"
-                      value="ASide"
-                      checked={selectedSide === "ASide"}
-                      onChange={() => handleSideChange("ASide")}
-                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      East Side
-                    </span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input
-                      type="radio"
-                      name="side"
-                      value="BSide"
-                      checked={selectedSide === "BSide"}
-                      onChange={() => handleSideChange("BSide")}
-                      className="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-sm text-gray-700">
-                      West Side
-                    </span>
-                  </label>
+                <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1 shadow-inner">
+                  {[
+                    { value: 'ASide', label: 'East Side' },
+                    { value: 'BSide', label: 'West Side' }
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleSideChange(value)}
+                      className={`relative flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        selectedSide === value
+                          ? 'bg-white text-blue-600 shadow-sm'
+                          : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'
+                      }`}
+                      aria-pressed={selectedSide === value}
+                    >
+                      <span className="relative z-10 flex items-center">
+                        <svg
+                          className={`mr-2 h-3.5 w-3.5 ${
+                            selectedSide === value ? 'text-blue-500' : 'text-gray-400'
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          {value === 'ASide' ? (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M13 10V3L4 14h7v7l9-11h-7z"
+                            />
+                          ) : (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+                            />
+                          )}
+                        </svg>
+                        {label}
+                      </span>
+                      {selectedSide === value && (
+                        <span className="absolute inset-0 rounded-md bg-white/80 ring-1 ring-gray-200"></span>
+                      )}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="relative">
@@ -1214,20 +1253,47 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
-              <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
-                {["Live", "1h", "2h", "5h", "7h", "12h"].map((interval) => (
-                  <button
-                    key={interval}
-                    className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
-                      timeInterval === interval
-                        ? "scale-[1.02] border-blue-300 bg-blue-100 text-blue-700 shadow-sm"
-                        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                    } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
-                    onClick={() => handleTimeIntervalChange(interval)}
-                  >
-                    {interval}
-                  </button>
-                ))}
+              <div className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto">
+                <svg className="mr-1.5 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="inline-flex items-center rounded-lg bg-gray-50 p-0.5 shadow-inner">
+                  {[
+                    { value: "Live", label: "Live" },
+                    { value: "1h", label: "1h" },
+                    { value: "2h", label: "2h" },
+                    { value: "5h", label: "5h" },
+                    { value: "7h", label: "7h" },
+                    { value: "12h", label: "12h" }
+                  ].map(({ value, label }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleTimeIntervalChange(value)}
+                      className={`relative flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                        timeInterval === value
+                          ? 'bg-white text-blue-600 shadow-sm ring-1 ring-gray-200'
+                          : 'text-gray-600 hover:bg-white/50 hover:text-gray-900'
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+                      aria-pressed={timeInterval === value}
+                    >
+                      {value === 'Live' && (
+                        <span 
+                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
+                            timeInterval === 'Live' 
+                              ? 'bg-green-500 animate-pulse' 
+                              : 'bg-gray-400'
+                          }`}
+                          style={timeInterval === 'Live' ? { 
+                            animationDuration: '1.5s',
+                            animationTimingFunction: 'cubic-bezier(0.4, 0, 0.6, 1)'
+                          } : {}}
+                        ></span>
+                      )}
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1360,11 +1426,47 @@ const Dashboard = () => {
         </div>
 
         <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl border-2 bg-white/30 p-4 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
-          <div className="flex w-full items-center justify-center rounded-2xl border-2 border-white font-medium md:w-[30%]">
-            left side
+          <div className="flex flex-col w-full h-full p-1 rounded-2xl border-2 gap-1 border-white bg-white/5 backdrop-blur-sm md:w-[40%] grid grid-cols-3">
+           
+              {/* ES1-ES12 */}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const sensorId = `ES${i + 1}`;
+                // Mock data - replace with actual data from your API
+                const currentAvg = 50 + Math.random() * 50; // Random value between 50-100
+                const previousAvg = 45 + Math.random() * 50; // Random value between 45-95
+                
+                return (
+                  <SensorComparisonCard
+                    key={sensorId}
+                    sensorId={sensorId}
+                    currentAvg={currentAvg}
+                    previousAvg={previousAvg}
+                    unit="°C"
+                  />
+                );
+              })}
+              
+              {/* WS13-WS24 */}
+              {Array.from({ length: 12 }).map((_, i) => {
+                const sensorId = `WS${i + 13}`;
+                // Mock data - replace with actual data from your API
+                const currentAvg = 50 + Math.random() * 50; // Random value between 50-100
+                const previousAvg = 45 + Math.random() * 50; // Random value between 45-95
+                
+                return (
+                  <SensorComparisonCard
+                    key={sensorId}
+                    sensorId={sensorId}
+                    currentAvg={currentAvg}
+                    previousAvg={previousAvg}
+                    unit="°C"
+                  />
+                );
+              })}
+            
           </div>
 
-          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[70%]">
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%]">
             <div className="relative">
               <img src={potShell} alt="potShell" />
               {/* east side sensors */}
