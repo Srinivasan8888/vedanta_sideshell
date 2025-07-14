@@ -103,6 +103,8 @@ const Dashboard = () => {
   const [previousSensorData, setPreviousSensorData] = useState({});
   const intervalRef = useRef();
   const [thresholds, setThresholds] = useState({ min: '', max: '' });
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [liveStatus, setLiveStatus] = useState({ isLive: false, timestamp: '' });
 
 
   const handleTimeIntervalChange = async (interval) => {
@@ -277,6 +279,32 @@ const Dashboard = () => {
 
 
 
+  useEffect(() => {
+    const checkStatus = () => {
+      if (lastUpdatedAt) {
+        const updatedAt = new Date(lastUpdatedAt.replace(' ', 'T')); // Ensure ISO format for compatibility
+        const now = new Date();
+        const diffInMinutes = (now.getTime() - updatedAt.getTime()) / (1000 * 60);
+
+        setLiveStatus({
+          isLive: diffInMinutes <= 5,
+          timestamp: updatedAt.toLocaleString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+        });
+      }
+    };
+
+    checkStatus();
+    const intervalId = setInterval(checkStatus, 30000); // Check every 30 seconds
+
+    return () => clearInterval(intervalId);
+  }, [lastUpdatedAt]);
+
   const handleSaveThresholds = async () => {
     try {
       await API.post('/api/v2/setThresholds', thresholds);
@@ -305,7 +333,11 @@ const Dashboard = () => {
       }
 
 
-      const { realtime, hourlyAverages, historical } = response.data.data;
+            const { realtime, hourlyAverages, historical } = response.data.data;
+
+      if (realtime && realtime.length > 0 && realtime[0].TIME) {
+        setLastUpdatedAt(realtime[0].TIME);
+      }
 
       console.log('Received realtime data:', realtime);
 
@@ -649,10 +681,18 @@ const Dashboard = () => {
           <div className="flex overflow-hidden flex-col w-full h-full bg-white rounded-xl border border-gray-100 shadow-sm">
             <div className="flex-shrink-0 p-2 border-b border-gray-100">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium text-gray-700">Temperature Statistics</h3>
-                                <div className="flex items-center space-x-1 bg-blue-50 text-green-600 text-xs font-medium px-2.5 py-1 rounded-full">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  <span>Live</span>
+                <h5 className="text-sm font-medium text-gray-700">Temperature Statistics</h5>
+                {liveStatus.timestamp && <h3 className="text-sm font-medium text-gray-700"> updatedAt: {liveStatus.timestamp || 'N/A'}</h3>}
+                                                <div className={`flex items-center space-x-2 text-xs font-medium px-2.5 py-1 rounded-full ${liveStatus.isLive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {liveStatus.isLive ? (
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  ) : (
+                    <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                  )}
+                  <div className="flex flex-col items-end">
+                    <span>{liveStatus.isLive ? 'Live' : 'Inactive'}</span>
+                   
+                  </div>
                 </div>
               </div>
             </div>
