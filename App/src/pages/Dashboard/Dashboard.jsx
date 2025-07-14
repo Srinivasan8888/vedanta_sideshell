@@ -102,6 +102,9 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [previousSensorData, setPreviousSensorData] = useState({});
   const intervalRef = useRef();
+  const [thresholds, setThresholds] = useState({ min: '', max: '' });
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [liveStatus, setLiveStatus] = useState({ isLive: false, timestamp: null });
 
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return;
@@ -187,6 +190,22 @@ const Dashboard = () => {
       rawData: sideData
     };
   }, [chartHistoricalData, selectedSide]);
+
+  const maxDataValue = useMemo(() => {
+    if (!chartData.datasets || chartData.datasets.length === 0) {
+      return 100; // Default max if no data
+    }
+
+    const allData = chartData.datasets.flatMap(dataset => dataset.data.filter(v => v !== null && isFinite(v)));
+
+    if (allData.length === 0) {
+      return 100; // Default max if all data is null/invalid
+    }
+
+    const maxVal = Math.max(...allData);
+
+    return maxVal;
+  }, [chartData.datasets]);
   const [sensors, setSensors] = useState([]);
   const [hourlyAverages, setHourlyAverages] = useState(Array(24).fill().map((_, i) => ({
     index: i + 1,
@@ -237,6 +256,60 @@ const Dashboard = () => {
 
 
 
+  useEffect(() => {
+    const fetchThresholds = async () => {
+      try {
+        const response = await API.get('/api/v2/getThresholds');
+        if (response.data) {
+          setThresholds(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching thresholds:', error);
+      }
+    };
+
+    fetchThresholds();
+  }, []);
+
+  const handleThresholdChange = (e) => {
+    const { name, value } = e.target;
+    setThresholds(prev => ({ ...prev, [name]: value }));
+  };
+
+  useEffect(() => {
+    const checkStatus = () => {
+      if (lastUpdatedAt) {
+        const now = new Date();
+        const updatedAt = new Date(lastUpdatedAt);
+        const diffInMinutes = (now - updatedAt) / (1000 * 60);
+
+        setLiveStatus({
+          isLive: diffInMinutes <= 5,
+          timestamp: updatedAt.toLocaleString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+        });
+      }
+    };
+
+    checkStatus(); // Initial check
+    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [lastUpdatedAt]);
+
+  const handleSaveThresholds = async () => {
+    try {
+      await API.post('/api/v2/setThresholds', thresholds);
+      alert('Thresholds updated successfully!');
+    } catch (error) {
+      console.error('Error updating thresholds:', error);
+      alert('Failed to update thresholds.');
+    }
+  };
+
   const fetchSensorData = useCallback(async () => {
     // This function is now only responsible for the API call and data transformation.
     try {
@@ -249,11 +322,14 @@ const Dashboard = () => {
       });
 
       console.log('Received response:', response.data);
+
       if (!response.data || !response.data.data) {
         throw new Error('Invalid response format from server');
       }
 
+      setLastUpdatedAt(response.data.data.updatedAt);
       const { realtime, hourlyAverages, historical } = response.data.data;
+
       console.log('Received realtime data:', realtime);
 
       if (hourlyAverages && Array.isArray(hourlyAverages)) {
@@ -312,25 +388,25 @@ const Dashboard = () => {
       const formattedSensors = [];
       realtime.forEach(waveguide => {
         if (!waveguide || !waveguide.sensors) return;
-        
+
         Object.entries(waveguide.sensors).forEach(([sensorKey, sensorData]) => {
           // Skip if sensorData is invalid or value is 'N/A'
           if (!sensorData || sensorData.value === undefined || sensorData.value === 'N/A') {
             console.log(`Skipping ${sensorKey} - Invalid or N/A value`);
             return;
           }
-          
+
           // Convert value to number and check if it's valid
           const numericValue = parseFloat(sensorData.value);
           if (isNaN(numericValue)) {
             console.log(`Skipping ${sensorKey} - Not a number:`, sensorData.value);
             return;
           }
-          
+
           const sensorNumber = sensorKey.replace('sensor', '');
           const sidePrefix = waveguide.waveguide === 'WG1' ? 'ASide' : 'BSide';
           const sensorId = `${waveguide.waveguide}+${sensorNumber}`;
-          
+
           formattedSensors.push({
             id: sensorId,
             name: `${sidePrefix} Sensor ${sensorNumber}`,
@@ -459,9 +535,9 @@ const Dashboard = () => {
                         ))}
                       </div>
                     ))}
-                     </div>
-                    {/* wg2Sensors */}
-                    <div className="inline-flex space-x-4 w-full min-w-max px-4">
+                  </div>
+                  {/* wg2Sensors */}
+                  <div className="inline-flex space-x-4 w-full min-w-max px-4">
                     {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
                       <div key={`wg2-${rowIndex}`} className="flex flex-col">
                         {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
@@ -471,7 +547,7 @@ const Dashboard = () => {
                         ))}
                       </div>
                     ))}
-                 </div>
+                  </div>
 
                 </div>
 
@@ -597,9 +673,16 @@ const Dashboard = () => {
             <div className="flex-shrink-0 p-2 border-b border-gray-100">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-medium text-gray-700">Temperature Statistics</h3>
-                <div className="flex items-center space-x-1 bg-blue-50 text-blue-600 text-xs font-medium px-2.5 py-1 rounded-full">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-                  <span>Live</span>
+                <div className={`flex items-center space-x-2 text-xs font-medium px-2.5 py-1 rounded-full ${liveStatus.isLive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {liveStatus.isLive ? (
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  ) : (
+                    <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                  )}
+                  <div className="flex flex-col items-end">
+                    <span>{liveStatus.isLive ? 'Live' : 'Inactive'}</span>
+                    {liveStatus.timestamp && <span className="text-[10px] opacity-80">{liveStatus.timestamp}</span>}
+                  </div>
                 </div>
               </div>
             </div>
@@ -692,6 +775,9 @@ const Dashboard = () => {
                   <div className="relative">
                     <input
                       type="number"
+                      name="min"
+                      value={thresholds.min}
+                      onChange={handleThresholdChange}
                       className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="Min value"
                     />
@@ -704,6 +790,9 @@ const Dashboard = () => {
                   <div className="relative">
                     <input
                       type="number"
+                      name="max"
+                      value={thresholds.max}
+                      onChange={handleThresholdChange}
                       className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
                       placeholder="Max value"
                     />
@@ -712,7 +801,7 @@ const Dashboard = () => {
                 </div>
 
                 <div className="sm:col-span-1">
-                  <button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white lg:text-xs lg:font-thin 2xl:text-sm 2xl:font-medium py-[7px]  rounded-md shadow-sm hover:shadow transition-all duration-150 whitespace-nowrap">
+                  <button onClick={handleSaveThresholds} className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white lg:text-xs lg:font-thin 2xl:text-sm 2xl:font-medium py-[7px]  rounded-md shadow-sm hover:shadow transition-all duration-150 whitespace-nowrap">
                     Save
                   </button>
                 </div>
@@ -790,9 +879,9 @@ const Dashboard = () => {
                               const sensorId = `AS${index + 1}`;
                               const isHidden = hiddenSensors[sensorId];
                               const sensorNumber = sensor.name.split(' ').pop();
-                              
+
                               return (
-                                <tr 
+                                <tr
                                   key={sensor.id}
                                   className={`text-xs cursor-pointer hover:bg-gray-50 ${isHidden ? 'opacity-40' : ''}`}
                                   onClick={(e) => {
@@ -806,7 +895,7 @@ const Dashboard = () => {
                                 >
                                   <td className="px-3 py-2 whitespace-nowrap">
                                     <div className="flex items-center">
-                                      <div 
+                                      <div
                                         className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
                                         style={{
                                           backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
@@ -826,11 +915,10 @@ const Dashboard = () => {
                                     </span>
                                   </td>
                                   <td className="px-3 py-2 whitespace-nowrap">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                      sensor.isPositive 
-                                        ? 'bg-green-100 text-green-800' 
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${sensor.isPositive
+                                        ? 'bg-green-100 text-green-800'
                                         : 'bg-red-100 text-red-800'
-                                    }`}>
+                                      }`}>
                                       {sensor.isPositive ? '↑' : '↓'} {sensor.difference}°C
                                     </span>
                                   </td>
@@ -841,7 +929,7 @@ const Dashboard = () => {
                       </table>
                     </div>
                     <div className="p-2 bg-gray-50 text-right border-t border-gray-100">
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowLegendPopup(false);
@@ -952,7 +1040,7 @@ const Dashboard = () => {
                         callback: value => `${value}°C`
                       },
                       min: 0,
-                      max: 100
+                      max: maxDataValue + 50
                     }
                   },
                   interaction: {
