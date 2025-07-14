@@ -409,7 +409,7 @@ const Dashboard = () => {
         setLastUpdatedAt(realtime[0].TIME);
       }
 
-      console.log("Received realtime data:", realtime);
+      console.log("Received realtime data:", realtime); // my changes to check
 
       if (hourlyAverages && Array.isArray(hourlyAverages)) {
         setHourlyAverages(hourlyAverages);
