@@ -2310,48 +2310,31 @@ class ApiController {
   async getThresholds(req, res) {
     try {
       const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
-      const { sensorId, side } = req.query;
 
       // Validate required parameters
       if (!userId) {
         return res.status(400).json({
+          success: false,
           error: 'User ID is required in headers (X-User-ID or x-user-id)'
         });
       }
 
-      // Build query
-      const query = { userId };
-      
-      if (sensorId) {
-        // Validate sensorId format if provided
-        const sensorNum = parseInt(sensorId.replace('sensor', ''));
-        if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
-          return res.status(400).json({
-            error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
-          });
-        }
-        query.sensorId = sensorId;
-      }
-      
-      if (side) {
-        // Validate side if provided
-        const validSides = ['Aside', 'Bside'];
-        if (!validSides.includes(side)) {
-          return res.status(400).json({
-            error: 'Invalid side parameter. Must be "Aside" or "Bside"'
-          });
-        }
-        query.side = side;
-      }
-
-      const thresholds = await Threshold.find(query)
-        .sort({ sensorId: 1, side: 1 })
+      // Find threshold for the user
+      const threshold = await Threshold.findOne({ userId })
         .select('-__v -createdAt -updatedAt');
+
+      // If no threshold exists, return default values
+      if (!threshold) {
+        return res.json({
+          success: true,
+          data: null,
+          message: 'No threshold settings found for this user'
+        });
+      }
 
       res.json({
         success: true,
-        count: thresholds.length,
-        data: thresholds
+        data: threshold
       });
     } catch (error) {
       console.error('Error getting thresholds:', error);
@@ -2363,10 +2346,10 @@ class ApiController {
     }
   }
 
-  async setThreshold(req, res) {
+  async setThresholds(req, res) {
     try {
       const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
-      const { sensorId, side, minThreshold, maxThreshold } = req.body;
+      const { minThreshold, maxThreshold } = req.body;
 
       // Validate required parameters
       if (!userId) {
@@ -2376,49 +2359,31 @@ class ApiController {
         });
       }
 
-      if (!sensorId || side === undefined || minThreshold === undefined || maxThreshold === undefined) {
+      if (minThreshold === undefined || maxThreshold === undefined) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required parameters: sensorId, side, minThreshold, and maxThreshold are required'
+          error: 'Missing required parameters. Required: minThreshold, maxThreshold'
         });
       }
 
-      // Validate sensorId format
-      const sensorNum = parseInt(sensorId.replace('sensor', ''));
-      if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
+      // Validate thresholds are numbers and max > min
+      if (isNaN(minThreshold) || isNaN(maxThreshold)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
+          error: 'Thresholds must be numbers'
         });
       }
 
-      // Validate side
-      const validSides = ['Aside', 'Bside'];
-      if (!validSides.includes(side)) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid side parameter. Must be "Aside" or "Bside"'
-        });
-      }
-
-      // Validate thresholds
-      if (typeof minThreshold !== 'number' || typeof maxThreshold !== 'number') {
-        return res.status(400).json({
-          success: false,
-          error: 'minThreshold and maxThreshold must be numbers'
-        });
-      }
-
-      if (minThreshold >= maxThreshold) {
+      if (Number(maxThreshold) <= Number(minThreshold)) {
         return res.status(400).json({
           success: false,
           error: 'maxThreshold must be greater than minThreshold'
         });
       }
 
-      // Create or update the threshold
+      // Find existing threshold or create a new one
       const threshold = await Threshold.findOneAndUpdate(
-        { userId, sensorId, side },
+        { userId },
         { minThreshold, maxThreshold },
         { new: true, upsert: true, runValidators: true }
       );

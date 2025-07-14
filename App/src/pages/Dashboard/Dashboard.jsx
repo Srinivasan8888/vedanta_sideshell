@@ -264,12 +264,26 @@ const Dashboard = () => {
   useEffect(() => {
     const fetchThresholds = async () => {
       try {
-        const response = await API.get('/api/v2/getThresholds');
-        if (response.data) {
-          setThresholds(response.data);
+        const userId = localStorage.getItem('userId') || 'default-user';
+        const response = await API.get('/api/v2/getThresholds', {
+          headers: {
+            'X-User-ID': userId
+          }
+        });
+        
+        if (response.data && response.data.data) {
+          setThresholds({
+            min: response.data.data.minThreshold || '',
+            max: response.data.data.maxThreshold || ''
+          });
         }
       } catch (error) {
         console.error('Error fetching thresholds:', error);
+        // Set default thresholds if there's an error
+        setThresholds({
+          min: '',
+          max: ''
+        });
       }
     };
 
@@ -311,18 +325,11 @@ const Dashboard = () => {
 
   const handleSaveThresholds = async () => {
     try {
-      // Get the first sensor ID from the sensors array as a default
-      // Extract just the number from the sensor ID (e.g., 'WG1 38' -> '38')
-      const defaultSensorNumber = sensors.length > 0 ? sensors[0].name.replace(/[^0-9]/g, '') : '1';
-      const sensorId = `sensor${defaultSensorNumber}`;
-      
       // Get the user ID from local storage or use a default
       const userId = localStorage.getItem('userId') || 'default-user';
       
-      // Prepare the request payload with all required parameters
+      // Prepare the request payload with only the required fields
       const payload = {
-        sensorId,
-        side: selectedSide,
         minThreshold: Number(thresholds.min),
         maxThreshold: Number(thresholds.max)
       };

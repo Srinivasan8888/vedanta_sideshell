@@ -6,16 +6,7 @@ const thresholdSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  sensorId: {
-    type: String,
-    required: true,
-    match: /^sensor([1-9]|[12][0-9]|3[0-8])$/
-  },
-  side: {
-    type: String,
-    required: true,
-    enum: ['Aside', 'Bside']
-  },
+
   minThreshold: {
     type: Number,
     required: true
