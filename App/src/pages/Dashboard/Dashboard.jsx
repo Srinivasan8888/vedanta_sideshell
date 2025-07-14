@@ -23,6 +23,7 @@ import {
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import API from "../../Assets/components/Axios/AxiosInterceptor";
+import potShell from "../../Assets/images/pot_top1.png";
 
 // Register ChartJS components
 ChartJS.register(
@@ -595,6 +596,10 @@ const Dashboard = () => {
       }
     };
   }, []);
+
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [hoveredIndex2, setHoveredIndex2] = useState(null);
+  const leftValues = [9.5, 16, 23, 30, 37, 44, 51, 58, 64.5, 71, 78, 85];
 
   return (
     <div className="h-full w-full">
@@ -1229,7 +1234,7 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="relative h-[calc(100%-50px)] rounded-lg border border-gray-100 bg-white/50 p-3">
+            <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 p-3 md:h-[400px] xl:h-[calc(100%-50px)]">
               <div className="absolute right-4 top-2 z-10 text-xs text-gray-500">
                 {selectedSide === "ASide" ? "East Side" : "West Side"} -{" "}
                 {chartData.datasets?.length || 0} sensors
@@ -1357,13 +1362,58 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="order-5 flex w-[100%] gap-2 rounded-2xl border-2 bg-white/30 p-4 shadow-md backdrop-blur-sm xl:order-5">
-          <div className="w-[30%] rounded-2xl border-2 border-white"></div>
-          <div className="w-[70%] rounded-2xl border-2 border-white">
-            {/* <Suspense fallback={<div className="flex justify-center items-center w-full h-full">Loading 3D model...</div>}>
-            <ModelViewer modelPath="/side_shell.glb" />
-          </Suspense> */}
-            <div>new</div>
+        <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl border-2 bg-white/30 p-4 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
+          <div className="flex w-full items-center justify-center rounded-2xl border-2 border-white font-medium md:w-[30%]">
+            left side
+          </div>
+
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[70%]">
+            <div className="relative">
+              <img src={potShell} alt="potShell" />
+              {/* east side sensors */}
+              {leftValues.map((data, i) => (
+                <div
+                  key={i}
+                  className="xs:leading-normal xs:text-[10px] absolute top-[17%] flex flex-col gap-2 text-[8px] font-semibold leading-tight 2xl:text-sm"
+                  style={{ left: `${data}%` }}
+                >
+                  <div
+                    className="relative cursor-pointer py-2 hover:scale-110 hover:text-[#3047C0]"
+                    onMouseEnter={() => setHoveredIndex(i)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                  >
+                    <div className="hover:text-[#3048C0]">ES{i + 1}</div>
+                    <div
+                      className={`absolute -top-[70%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${hoveredIndex === i ? "opacity-100" : "pointer-events-none opacity-0"}`}
+                    >
+                      {wg1Sensors[i]?.value} °C
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* west side sensors */}
+              {leftValues.map((data, i) => (
+                <div
+                  key={i}
+                  className="xs:text-[9px] absolute top-[68%] flex flex-col gap-2 text-[8px] font-semibold leading-tight 2xl:text-xs 2xl:leading-normal"
+                  style={{ left: `${data}%` }}
+                >
+                  <div
+                    className="relative cursor-pointer py-2 hover:scale-110 hover:text-[#3047C0]"
+                    onMouseEnter={() => setHoveredIndex2(i)}
+                    onMouseLeave={() => setHoveredIndex2(null)}
+                  >
+                    <div className="hover:text-[#3048C0]">WS{i + 1}</div>
+                    <div
+                      className={`absolute -bottom-[80%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${hoveredIndex2 === i ? "opacity-100" : "pointer-events-none opacity-0"}`}
+                    >
+                      {wg2Sensors[i]?.value} °C
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
