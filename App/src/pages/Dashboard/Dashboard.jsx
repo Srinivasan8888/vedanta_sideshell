@@ -103,8 +103,7 @@ const Dashboard = () => {
   const [previousSensorData, setPreviousSensorData] = useState({});
   const intervalRef = useRef();
   const [thresholds, setThresholds] = useState({ min: '', max: '' });
-  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
-  const [liveStatus, setLiveStatus] = useState({ isLive: false, timestamp: null });
+
 
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return;
@@ -276,29 +275,7 @@ const Dashboard = () => {
     setThresholds(prev => ({ ...prev, [name]: value }));
   };
 
-  useEffect(() => {
-    const checkStatus = () => {
-      if (lastUpdatedAt) {
-        const now = new Date();
-        const updatedAt = new Date(lastUpdatedAt);
-        const diffInMinutes = (now - updatedAt) / (1000 * 60);
 
-        setLiveStatus({
-          isLive: diffInMinutes <= 5,
-          timestamp: updatedAt.toLocaleString('en-GB', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-        });
-      }
-    };
-
-    checkStatus(); // Initial check
-    const interval = setInterval(checkStatus, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [lastUpdatedAt]);
 
   const handleSaveThresholds = async () => {
     try {
@@ -327,7 +304,7 @@ const Dashboard = () => {
         throw new Error('Invalid response format from server');
       }
 
-      setLastUpdatedAt(response.data.data.updatedAt);
+
       const { realtime, hourlyAverages, historical } = response.data.data;
 
       console.log('Received realtime data:', realtime);
@@ -673,16 +650,9 @@ const Dashboard = () => {
             <div className="flex-shrink-0 p-2 border-b border-gray-100">
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-medium text-gray-700">Temperature Statistics</h3>
-                <div className={`flex items-center space-x-2 text-xs font-medium px-2.5 py-1 rounded-full ${liveStatus.isLive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {liveStatus.isLive ? (
-                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  ) : (
-                    <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                  )}
-                  <div className="flex flex-col items-end">
-                    <span>{liveStatus.isLive ? 'Live' : 'Inactive'}</span>
-                    {liveStatus.timestamp && <span className="text-[10px] opacity-80">{liveStatus.timestamp}</span>}
-                  </div>
+                                <div className="flex items-center space-x-1 bg-blue-50 text-green-600 text-xs font-medium px-2.5 py-1 rounded-full">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                  <span>Live</span>
                 </div>
               </div>
             </div>
@@ -763,7 +733,7 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold">3</p>
+                <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-2xl 2xl:font-bold">N/A</p>
                 <p className="mt-auto text-xs font-medium text-amber-600">Requires attention</p>
               </div>
             </div>
