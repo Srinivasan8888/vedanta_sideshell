@@ -25,8 +25,9 @@ const ports = process.env.PORT;
 app.use(helmet());
 app.use(cors({
     // origin: [`http://34.100.168.176:3000`,  `http://locahost:3000`, ], // 
-//   origin: 'http://34.100.168.176:3000',
-  origin: 'http://localhost:3000',
+//   origin: ['http://52.66.175.77:3000', 'http://52.66.175.77:4000'],
+origin: 'http://52.66.175.77:3000',
+//   origin: 'http://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: [
     'Content-Type', 
