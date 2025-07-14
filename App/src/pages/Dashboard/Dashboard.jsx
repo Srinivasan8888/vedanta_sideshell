@@ -56,7 +56,7 @@ const SensorCard = React.memo(
     };
 
     return (
-      <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-40 relative group">
+      <div className="bg-[rgba(234,237,249,1)] p-3 rounded-lg shadow-md border border-gray-200 hover:shadow transition-shadow 2xl:w-36 relative group">
         <button
           onClick={handleNavigate}
           className="absolute top-1 right-4 p-1 rounded opacity-0 transition-opacity duration-200 group-hover:opacity-100 hover:bg-blue-50"
@@ -74,11 +74,15 @@ const SensorCard = React.memo(
           </span>
         </div>
         <div className="flex flex-col">
-          <h3 className="text-sm font-bold text-[#1e2c74] truncate flex left-0">{sensor.name}</h3>
-          <div className="flex items-baseline">
-            <span className="text-lg font-bold text-[#3047c0]">
+          <h3 className="text-sm font-semibold text-[#1e2c74] truncate flex left-0">
+            {sensor.name.includes('A') 
+              ? `ES${sensor.name.replace(/[^0-9]/g, '')}`
+              : `WS${Number(sensor.name.replace(/[^0-9]/g, '')) + 12}`}
+          </h3>
+          <div className="flex items-baseline ">
+            <span className="text-sm font-bold text-[#3047c0]">
               {sensor.value}
-              <span className="text-lg font-bold text-[#3047c0]">°C</span>
+              <span className="text-sm font-bold text-[#3047c0]">°C</span>
             </span>
           </div>
         </div>
@@ -307,11 +311,34 @@ const Dashboard = () => {
 
   const handleSaveThresholds = async () => {
     try {
-      await API.post('/api/v2/setThresholds', thresholds);
+      // Get the first sensor ID from the sensors array as a default
+      // Extract just the number from the sensor ID (e.g., 'WG1 38' -> '38')
+      const defaultSensorNumber = sensors.length > 0 ? sensors[0].name.replace(/[^0-9]/g, '') : '1';
+      const sensorId = `sensor${defaultSensorNumber}`;
+      
+      // Get the user ID from local storage or use a default
+      const userId = localStorage.getItem('userId') || 'default-user';
+      
+      // Prepare the request payload with all required parameters
+      const payload = {
+        sensorId,
+        side: selectedSide,
+        minThreshold: Number(thresholds.min),
+        maxThreshold: Number(thresholds.max)
+      };
+      
+      // Make the API request with headers
+      await API.post('/api/v2/setThresholds', payload, {
+        headers: {
+          'X-User-ID': userId
+        }
+      });
+      
       alert('Thresholds updated successfully!');
     } catch (error) {
       console.error('Error updating thresholds:', error);
-      alert('Failed to update thresholds.');
+      const errorMessage = error.response?.data?.error || 'Failed to update thresholds';
+      alert(`Error: ${errorMessage}. Please check the console for details.`);
     }
   };
 
@@ -516,7 +543,7 @@ const Dashboard = () => {
           <div className="grid gap-2 h-full grid-col">
             <div className="overflow-hidden p-4 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30">
               <div className="relative">
-                <button
+                {/* <button
                   onClick={scrollLeft}
                   className="absolute left-0 top-1/2 z-10 flex items-center justify-center w-10 h-10 bg-white/50 backdrop-blur-sm rounded-full shadow-md transform -translate-y-1/2 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 ease-in-out"
                   style={{ marginLeft: '8px' }}
@@ -525,7 +552,7 @@ const Dashboard = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                   </svg>
-                </button>
+                </button> */}
 
                 <div
                   ref={scrollContainerRef}
@@ -533,12 +560,12 @@ const Dashboard = () => {
                   style={{ scrollBehavior: 'smooth' }}
                   onScroll={handleScroll}
                 >
-                  <div className="inline-flex space-x-4 w-full min-w-max px-4">
+                  <div className="inline-flex w-full min-w-max px-1 space-x-2">
                     {/* wg1Sensors */}
                     {Array(Math.ceil(wg1Sensors.length / 2)).fill().map((_, rowIndex) => (
                       <div key={`wg1-${rowIndex}`} className="flex flex-col">
                         {wg1Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                          <div key={sensor.id} className="w-40 h-24">
+                          <div key={sensor.id} className="w-36 h-24">
                             <SensorCard sensor={sensor} />
                           </div>
                         ))}
@@ -546,11 +573,11 @@ const Dashboard = () => {
                     ))}
                   </div>
                   {/* wg2Sensors */}
-                  <div className="inline-flex space-x-4 w-full min-w-max px-4">
+                  <div className="inline-flex w-full min-w-max px-1 space-x-2">
                     {Array(Math.ceil(wg2Sensors.length / 2)).fill().map((_, rowIndex) => (
                       <div key={`wg2-${rowIndex}`} className="flex flex-col">
                         {wg2Sensors.slice(rowIndex * 2, rowIndex * 2 + 2).map((sensor) => (
-                          <div key={sensor.id} className="w-40 h-24">
+                          <div key={sensor.id} className="w-36 h-24">
                             <SensorCard sensor={sensor} />
                           </div>
                         ))}
@@ -560,7 +587,7 @@ const Dashboard = () => {
 
                 </div>
 
-                <button
+                {/* <button
                   onClick={scrollRight}
                   className="absolute right-0 top-1/2 z-10 flex items-center justify-center w-10 h-10 bg-white/50 backdrop-blur-sm rounded-full shadow-md transform -translate-y-1/2 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-300 ease-in-out"
                   style={{ marginRight: '8px' }}
@@ -569,7 +596,7 @@ const Dashboard = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
@@ -646,7 +673,7 @@ const Dashboard = () => {
                           <td className="px-4 py-2 text-sm font-medium text-gray-700">
                             <span className="inline-flex items-center">
                               <span className="mr-2 w-2 h-2 bg-blue-500 rounded-full"></span>
-                              ASide
+                                East Side
                             </span>
                           </td>
                           <td className="px-4 py-2 text-sm font-medium text-gray-700">{aSide.temp}°C</td>
@@ -660,7 +687,7 @@ const Dashboard = () => {
                           <td className="px-4 py-2 text-sm font-medium text-gray-700">
                             <span className="inline-flex items-center">
                               <span className="mr-2 w-2 h-2 bg-amber-500 rounded-full"></span>
-                              BSide
+                              West Side
                             </span>
                           </td>
                           <td className="px-4 py-2 text-sm font-medium text-gray-700">{bSide.temp}°C</td>
@@ -711,11 +738,11 @@ const Dashboard = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.maxTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">ASide</p>
+                    <p className="text-xs text-gray-500">East Side</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.maxTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">BSide</p>
+                    <p className="text-xs text-gray-500">West Side</p>
                   </div>
                 </div>
               </div>
@@ -733,11 +760,11 @@ const Dashboard = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.minTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">ASide</p>
+                    <p className="text-xs text-gray-500">East Side</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.minTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">BSide</p>
+                    <p className="text-xs text-gray-500">West Side</p>
                   </div>
                 </div>
               </div>
@@ -755,11 +782,11 @@ const Dashboard = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.avgTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">ASide</p>
+                    <p className="text-xs text-gray-500">East Side</p>
                   </div>
                   <div className="pl-4 text-center border-l border-gray-200">
                     <p className="text-gray-800 lg:text-xs lg:font-regular 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.avgTemp ?? '--'}</p>
-                    <p className="text-xs text-gray-500">BSide</p>
+                    <p className="text-xs text-gray-500">West Side</p>
                   </div>
                 </div>
               </div>
@@ -838,7 +865,7 @@ const Dashboard = () => {
                       onChange={() => handleSideChange('ASide')}
                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                     />
-                    <span className="ml-2 text-sm text-gray-700">A Side</span>
+                    <span className="ml-2 text-sm text-gray-700">East Side</span>
                   </label>
                   <label className="inline-flex items-center">
                     <input
@@ -849,7 +876,7 @@ const Dashboard = () => {
                       onChange={() => handleSideChange('BSide')}
                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                     />
-                    <span className="ml-2 text-sm text-gray-700">B Side</span>
+                    <span className="ml-2 text-sm text-gray-700">West Side</span>
                   </label>
                 </div>
               </div>
@@ -864,7 +891,7 @@ const Dashboard = () => {
                   </svg>
                 </button>
                 {showLegendPopup && (
-                  <div className="absolute right-0 top-8 z-10 w-64 bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden">
+                  <div className="absolute right-0 top-8 z-10 w-[28rem] bg-white rounded-lg border border-gray-200 shadow-lg overflow-visible">
                     <div className="p-3 border-b border-gray-100">
                       <h4 className="text-sm font-medium text-gray-700">
                         {selectedSide} Sensors
@@ -873,70 +900,63 @@ const Dashboard = () => {
                         </span>
                       </h4>
                     </div>
-                    <div className="overflow-y-auto max-h-80">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sensor</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {sensors
-                            .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
-                            .map((sensor, index) => {
-                              const sensorId = `AS${index + 1}`;
-                              const isHidden = hiddenSensors[sensorId];
-                              const sensorNumber = sensor.name.split(' ').pop();
+                    <div className="p-3">
+                      <div className="grid grid-cols-3 ">
+                        {sensors
+                          .filter(sensor => sensor.waveguide === (selectedSide === 'ASide' ? 'WG1' : 'WG2'))
+                          .map((sensor, index) => {
+                            // Get the sensor number from the name (e.g., 'Sensor 1' -> '1')
+                            const sensorNumber = sensor.name.replace(/\D/g, '');
+                            // Create consistent sensor ID that matches the chart's format
+                            const sensorId = `${sensor.waveguide === 'WG1' ? 'ASide' : 'BSide'}${sensorNumber}`;
+                            const isHidden = hiddenSensors[sensorId];
+                            const displayName = sensor.waveguide === 'WG1' 
+                              ? `ES${sensorNumber}`
+                              : `WS${Number(sensorNumber) + 12}`;
 
-                              return (
-                                <tr
-                                  key={sensor.id}
-                                  className={`text-xs cursor-pointer hover:bg-gray-50 ${isHidden ? 'opacity-40' : ''}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setHiddenSensors(prev => ({
-                                      ...prev,
-                                      [sensorId]: !prev[sensorId]
-                                    }));
+                            return (
+                              <div
+                                key={sensor.id}
+                                className={`flex items-center p-2 rounded text-xs cursor-pointer hover:bg-gray-50 ${isHidden ? 'opacity-40' : ''}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setHiddenSensors(prev => ({
+                                    ...prev,
+                                    [sensorId]: !prev[sensorId]
+                                  }));
+                                }}
+                                title={isHidden ? 'Show sensor' : 'Hide sensor'}
+                              >
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full mr-2 flex-shrink-0"
+                                  style={{
+                                    backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%`,
+                                    opacity: isHidden ? 0.5 : 0.9,
+                                    transition: 'opacity 0.2s',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                                   }}
-                                  title={isHidden ? 'Show sensor' : 'Hide sensor'}
-                                >
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                      <div
-                                        className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
-                                        style={{
-                                          backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%)`,
-                                          opacity: isHidden ? 0.5 : 0.9,
-                                          transition: 'opacity 0.2s',
-                                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                                        }}
-                                      />
-                                      <span className={`truncate ${isHidden ? 'text-gray-500' : 'text-gray-900'}`}>
-                                        {sensor.name}
-                                      </span>
-                                    </div>
-                                  </td>
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    <span className={`font-medium ${isHidden ? 'text-gray-500' : 'text-blue-600'}`}>
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-baseline">
+                                    <span className={`truncate font-medium ${isHidden ? 'text-gray-500' : 'text-gray-900'}`}>
+                                      {displayName}
+                                    </span>
+                                    <span className={`ml-2 font-medium ${isHidden ? 'text-gray-400' : 'text-blue-600'}`}>
                                       {sensor.value}°C
                                     </span>
-                                  </td>
-                                  <td className="px-3 py-2 whitespace-nowrap">
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${sensor.isPositive
-                                        ? 'bg-green-100 text-green-800'
-                                        : 'bg-red-100 text-red-800'
-                                      }`}>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                                      sensor.isPositive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                    }`}>
                                       {sensor.isPositive ? '↑' : '↓'} {sensor.difference}°C
                                     </span>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                        </tbody>
-                      </table>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
                     </div>
                     <div className="p-2 bg-gray-50 text-right border-t border-gray-100">
                       <button
@@ -944,7 +964,7 @@ const Dashboard = () => {
                           e.stopPropagation();
                           setShowLegendPopup(false);
                         }}
-                        className="text-xs text-blue-600 hover:text-blue-800"
+                        className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                       >
                         Close
                       </button>
@@ -971,14 +991,16 @@ const Dashboard = () => {
 
             <div className="relative h-[calc(100%-50px)] bg-white/50 rounded-lg p-3 border border-gray-100">
               <div className="absolute top-2 right-4 z-10 text-xs text-gray-500">
-                {selectedSide} - {chartData.datasets?.length || 0} sensors
+                {selectedSide === 'ASide' ? 'East Side' : 'West Side'} - {chartData.datasets?.length || 0} sensors
               </div>
               <Line
                 key={`${chartUpdateKey}-${selectedSide}`}
                 data={{
                   labels: chartData.labels,
-                  datasets: (chartData.datasets || []).filter((_, index) => {
-                    const sensorId = `AS${index + 1}`;
+                  datasets: (chartData.datasets || []).filter((dataset, index) => {
+                    // Use the same sensor ID format as in the legend (e.g., 'ASide1', 'BSide1')
+                    const sensorNumber = index + 1;
+                    const sensorId = `${selectedSide}${sensorNumber}`;
                     return !hiddenSensors[sensorId];
                   })
                 }}
@@ -993,7 +1015,8 @@ const Dashboard = () => {
                     tooltip: {
                       filter: (tooltipItem) => {
                         const datasetIndex = tooltipItem.datasetIndex;
-                        const sensorId = `AS${datasetIndex + 1}`;
+                        // Get the sensor ID in the format used in hiddenSensors (e.g., 'ASide1', 'BSide1')
+                        const sensorId = `${selectedSide}${datasetIndex + 1}`;
                         return !hiddenSensors[sensorId];
                       },
                       backgroundColor: '#fff',
@@ -1008,7 +1031,12 @@ const Dashboard = () => {
                       displayColors: true,
                       usePointStyle: true,
                       callbacks: {
-                        label: (context) => `${context.dataset.label}: ${context.parsed.y}°C`,
+                        label: (context) => {
+                          // Convert dataset label from 'sensorX' to 'ESX' or 'WSX' format
+                          const sensorNum = context.dataset.label.replace(/\D/g, '');
+                          const prefix = selectedSide === 'ASide' ? 'ES' : 'WS';
+                          return `${prefix}${sensorNum}: ${context.parsed.y}°C`;
+                        },
                         title: (context) => {
                           const date = new Date(chartData.rawData?.[context[0]?.dataIndex]?.timestamp);
                           return date.toLocaleString('en-GB', {
