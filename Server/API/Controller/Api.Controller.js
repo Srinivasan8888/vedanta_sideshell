@@ -2346,63 +2346,65 @@ class ApiController {
     }
   }
 
+  /**
+   * Set thresholds for a user (min/max) and store userId with it.
+   * Accepts userId from req.body or req.headers.
+   * POST /setThresholds
+   * Body: { minThreshold, maxThreshold, userId }
+   * Header: X-User-ID (optional)
+   */
   async setThresholds(req, res) {
     try {
-      const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      // Accept userId from body or headers
+      const userId = req.body.userId || req.headers['x-user-id'] || req.headers['X-User-ID'];
       const { minThreshold, maxThreshold } = req.body;
 
-      // Validate required parameters
       if (!userId) {
         return res.status(400).json({
           success: false,
-          error: 'User ID is required in headers (X-User-ID or x-user-id)'
+          error: 'User ID is required in body or headers',
         });
       }
-
       if (minThreshold === undefined || maxThreshold === undefined) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required parameters. Required: minThreshold, maxThreshold'
+          error: 'Missing required parameters. Required: minThreshold, maxThreshold',
         });
       }
-
-      // Validate thresholds are numbers and max > min
       if (isNaN(minThreshold) || isNaN(maxThreshold)) {
         return res.status(400).json({
           success: false,
-          error: 'Thresholds must be numbers'
+          error: 'Thresholds must be numbers',
         });
       }
-
       if (Number(maxThreshold) <= Number(minThreshold)) {
         return res.status(400).json({
           success: false,
-          error: 'maxThreshold must be greater than minThreshold'
+          error: 'maxThreshold must be greater than minThreshold',
         });
       }
-
-      // Find existing threshold or create a new one
+      // Upsert threshold for user
       const threshold = await Threshold.findOneAndUpdate(
         { userId },
         { minThreshold, maxThreshold },
         { new: true, upsert: true, runValidators: true }
       );
-
       res.status(200).json({
         success: true,
         message: 'Threshold saved successfully',
-        data: threshold
+        data: threshold,
       });
     } catch (error) {
-      console.error('Error setting threshold:', error);
+      console.error('Error in setThreshold:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to save threshold',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   }
 
+  
 
   async getSensorData(req, res) {
     try {
@@ -2578,6 +2580,81 @@ class ApiController {
         error: 'An error occurred while fetching sensor data',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
+    }
+  }
+
+
+  async getSensorComparison(req, res) {
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required in headers',
+        });
+      }
+      // 24h window
+      const endTime = new Date();
+      const startTime = new Date(endTime);
+      startTime.setHours(endTime.getHours() - 24);
+
+      // Helper to get sensor key for DB
+      const getSensorKey = (side, idx) => `sensor${idx}`;
+      // Helper to get sensor label for frontend
+      const getSensorLabel = (side, idx) =>
+        side === 'ASide' ? `ES${idx}` : `WS${idx + 12}`;
+
+      // WG1: ES1-ES12 (sensor1-sensor12)
+      // WG2: WS13-WS24 (sensor1-sensor12 in WG2, but label as WS13-WS24)
+      const sensors = [];
+      for (let i = 1; i <= 12; i++) {
+        sensors.push({ side: 'ASide', idx: i });
+        sensors.push({ side: 'BSide', idx: i });
+      }
+
+      // Fetch all 24h data for both waveguides in parallel
+      const [wg1Docs, wg2Docs] = await Promise.all([
+        sensormodel.find({ id, waveguide: 'WG1', createdAt: { $gte: startTime, $lte: endTime } }).sort({ createdAt: 1 }).lean(),
+        sensormodel.find({ id, waveguide: 'WG2', createdAt: { $gte: startTime, $lte: endTime } }).sort({ createdAt: 1 }).lean(),
+      ]);
+      // Fetch latest for both waveguides
+      const [latestWG1, latestWG2] = await Promise.all([
+        sensormodel.findOne({ id, waveguide: 'WG1' }).sort({ createdAt: -1 }).lean(),
+        sensormodel.findOne({ id, waveguide: 'WG2' }).sort({ createdAt: -1 }).lean(),
+      ]);
+
+      const results = sensors.map(({ side, idx }) => {
+        // For ASide: WG1, sensor1-12; For BSide: WG2, sensor1-12
+        const docs = side === 'ASide' ? wg1Docs : wg2Docs;
+        const sensorKey = getSensorKey(side, idx);
+        // 24h average
+        const values = docs
+          .map((doc) => parseFloat(doc[sensorKey]))
+          .filter((v) => !isNaN(v));
+        const avg = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null;
+        // Latest value
+        const latestDoc = side === 'ASide' ? latestWG1 : latestWG2;
+        const latestVal = latestDoc && latestDoc[sensorKey] !== undefined ? parseFloat(latestDoc[sensorKey]) : null;
+        // Trend
+        let trend = 'normal';
+        if (avg !== null && latestVal !== null) {
+          if (latestVal < avg) trend = 'low';
+          else if (latestVal > avg) trend = 'high';
+        }
+        // Sensor label
+        const label = getSensorLabel(side, idx);
+        return {
+          sensorId: label,
+          average: avg !== null ? Number(avg.toFixed(2)) : null,
+          latest: latestVal !== null ? Number(latestVal.toFixed(2)) : null,
+          trend,
+        };
+      });
+
+      res.json({ success: true, data: results });
+    } catch (error) {
+      console.error('Error in getSensorComparison:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

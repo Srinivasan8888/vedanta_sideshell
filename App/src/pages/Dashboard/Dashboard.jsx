@@ -90,27 +90,27 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
       </button>
 
       <div
-        className={`absolute bottom-1 right-1 flex items-center rounded-full bg-white p-1 text-[8px] 2xl:text-sm leading-tight ${sensor.isPositive ? "text-green-500" : "text-red-500"}`}
+        className={`absolute bottom-1 right-1 flex items-center rounded-full bg-white p-1 text-[8px] 2xl:text-base leading-tight ${sensor.isPositive ? "text-green-500" : "text-red-500"}`}
       >
         {sensor.isPositive ? (
-          <FaArrowUp className="mb-1 mr-0.5 mt-0.5 text-[8px] 2xl:text-sm" />
+          <FaArrowUp className="mb-1 mr-0.5 mt-0.5 text-[8px] 2xl:text-base" />
         ) : (
-          <FaArrowDown className="mb-1 mr-0.5 mt-0.5 text-[8px] 2xl:text-sm" />
+          <FaArrowDown className="mb-1 mr-0.5 mt-0.5 text-[8px] 2xl:text-base" />
         )}
         <span className="">{sensor.difference}</span>
       </div>
 
       <div className="flex flex-col gap-0 2xl:gap-4">
-        <h3 className="flex truncate text-[8px] leading-tight 2xl:text-sm 2xl:font-semibold text-[#1e2c74]">
+        <h3 className="flex truncate text-[8px] leading-tight 2xl:text-lg 2xl:font-semibold text-[#1e2c74]">
           {sensor.name.includes("A")
             ? `ES${sensor.name.replace(/[^0-9]/g, "")}`
             : `WS${Number(sensor.name.replace(/[^0-9]/g, "")) + 12}`}
         </h3>
 
-        <div className="flex items-baseline">
-          <span className="text-[10px] 2xl:text-sm 2xl:font-bold text-[#3047c0]">
+        <div className="flex xl:bottom-1 xl:absolute  items-baseline">
+          <span className="text-[10px] 2xl:text-base 2xl:font-bold text-[#3047c0]">
             {sensor.value}
-            <span className="text-[10px] 2xl:text-sm 2xl:font-bold text-[#3047c0]">°C</span>
+            <span className="text-[10px] 2xl:text-base 2xl:font-bold text-[#3047c0]">°C</span>
           </span>
         </div>
       </div>
@@ -610,7 +610,7 @@ const Dashboard = () => {
           <div className="grid gap-2 h-full grid-col">
             <div className="overflow-hidden p-2 2xl:p-4 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30">
               {/* <div className="relative"> */}
-                {/* <button
+              {/* <button
                     onClick={scrollLeft}
                     className="flex absolute left-0 top-1/2 z-10 justify-center items-center w-10 h-10 rounded-full shadow-md backdrop-blur-sm transition-all duration-300 ease-in-out transform -translate-y-1/2 bg-white/50 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     style={{ marginLeft: '8px' }}
@@ -621,14 +621,14 @@ const Dashboard = () => {
                     </svg>
                   </button> */}
 
-                <div
-                  ref={scrollContainerRef}
-                  // className="overflow-x-auto relative flex-1 scrollbar-custom xl:overflow-y-hidden flex flex-col gap-4"
-                  className="flex flex-col gap-2 2xl:gap-4 h-full"
-                  style={{ scrollBehavior: "smooth" }}
-                  onScroll={handleScroll}
-                >
-                  {/* <div className="inline-flex w-full min-w-max xl:space-x-1 2xl:space-x-2 2xl:px-1">
+              <div
+                ref={scrollContainerRef}
+                // className="overflow-x-auto relative flex-1 scrollbar-custom xl:overflow-y-hidden flex flex-col gap-4"
+                className="flex flex-col gap-2 2xl:gap-4 h-full"
+                style={{ scrollBehavior: "smooth" }}
+                onScroll={handleScroll}
+              >
+                {/* <div className="inline-flex w-full min-w-max xl:space-x-1 2xl:space-x-2 2xl:px-1">
                     {Array(Math.ceil(wg1Sensors.length / 2))
                       .fill()
                       .map((_, rowIndex) => (
@@ -644,27 +644,27 @@ const Dashboard = () => {
                       ))}
                   </div> */}
 
-                  <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
-                    {wg1Sensors.map((sensor) => (
-                      <div key={sensor.id} 
-                      // className="2xl:h-24 2xl:w-36"
-                      >
-                        <SensorCard sensor={sensor} />
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
+                  {wg1Sensors.map((sensor) => (
+                    <div key={sensor.id}
+                    // className="2xl:h-24 2xl:w-36"
+                    >
+                      <SensorCard sensor={sensor} />
+                    </div>
+                  ))}
+                </div>
 
-                  <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
-                    {wg2Sensors.map((sensor) => (
-                      <div key={sensor.id} 
-                      // className="2xl:h-24 2xl:w-36"
-                      >
-                        <SensorCard sensor={sensor} />
-                      </div>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
+                  {wg2Sensors.map((sensor) => (
+                    <div key={sensor.id}
+                    // className="2xl:h-24 2xl:w-36"
+                    >
+                      <SensorCard sensor={sensor} />
+                    </div>
+                  ))}
+                </div>
 
-                  {/* <div className="inline-flex px-1 space-x-2 w-full min-w-max">
+                {/* <div className="inline-flex px-1 space-x-2 w-full min-w-max">
                     {Array(Math.ceil(wg2Sensors.length / 2))
                       .fill()
                       .map((_, rowIndex) => (
@@ -679,9 +679,9 @@ const Dashboard = () => {
                         </div>
                       ))}
                   </div> */}
-                </div>
+              </div>
 
-                {/* <button
+              {/* <button
                     onClick={scrollRight}
                     className="flex absolute right-0 top-1/2 z-10 justify-center items-center w-10 h-10 rounded-full shadow-md backdrop-blur-sm transition-all duration-300 ease-in-out transform -translate-y-1/2 bg-white/50 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400"
                     style={{ marginRight: '8px' }}
@@ -883,87 +883,87 @@ const Dashboard = () => {
 
 
             {/* <div className="flex-1"> */}
-              <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-4 xl:grid-cols-2 h-[70%] 2xl:h-[60%] whitespace-nowrap border">
-                {/* Max Temperature Card */}
-                <div className="flex flex-col p-1 bg-gradient-to-br from-red-50 to-white rounded-lg border border-red-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] 2xl:text-sm leading-tight font-normal text-red-600">Max Temp</span>
-                    <div className="hidden rounded-lg bg-red-100 p-1 2xl:flex">
-                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 2xl:gap-2">
-                    <div className="text-center">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.maxTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
-                    </div>
-                    <div className="text-center border-l border-gray-200 2xl:pl-4">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.maxTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
-                    </div>
+            <div className="grid grid-cols-2 gap-3 p-3 md:grid-cols-4 xl:grid-cols-2 h-[70%] 2xl:h-[60%] whitespace-nowrap border">
+              {/* Max Temperature Card */}
+              <div className="flex flex-col p-1 bg-gradient-to-br from-red-50 to-white rounded-lg border border-red-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] 2xl:text-sm leading-tight font-normal text-red-600">Max Temp</span>
+                  <div className="hidden rounded-lg bg-red-100 p-1 2xl:flex">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                    </svg>
                   </div>
                 </div>
 
-                {/* Min Temperature Card */}
-                <div className="flex flex-col p-1 bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-normal text-blue-600 2xl:text-sm 2xl:font-medium">Min Temp</span>
-                    <div className="hidden rounded-lg bg-blue-100 p-1 2xl:flex">
-                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
+                <div className="grid grid-cols-2 2xl:gap-2">
+                  <div className="text-center">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.maxTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
                   </div>
-                  <div className="grid grid-cols-2 mt-auto 2xl:gap-4">
-                    <div className="text-center">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.minTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
-                    </div>
-                    <div className="text-center border-l border-gray-200 2xl:pl-4">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.minTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
-                    </div>
+                  <div className="text-center border-l border-gray-200 2xl:pl-4">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.maxTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
                   </div>
-                </div>
-                {/* Average Temperature Card */}
-                <div className="flex flex-col p-1 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
-                  <div className="flex justify-between items-center 2xl:mb-1">
-                    <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Avg Temp</span>
-                    <div className="hidden rounded-lg bg-gray-100 p-1 2xl:flex">
-                      <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                      </svg>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 2xl:gap-4">
-                    <div className="text-center">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.avgTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
-                    </div>
-                    <div className="text-center border-l border-gray-200 2xl:pl-4">
-                      <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.avgTemp ?? "--"}</p>
-                      <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sensor Alerts Card */}
-                <div className="flex flex-col p-1 bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100">
-                  <div className="flex justify-between items-center">
-                    <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Sensor Alerts</span>
-                    <div className="hidden rounded-lg bg-amber-100 p-1 2xl:flex">
-                      <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">N/A</p>
-                  <p className="mt-auto text-xs font-normal text-amber-600 2xl:text-sm 2xl:font-medium">Requires attention</p>
                 </div>
               </div>
+
+              {/* Min Temperature Card */}
+              <div className="flex flex-col p-1 bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-normal text-blue-600 2xl:text-sm 2xl:font-medium">Min Temp</span>
+                  <div className="hidden rounded-lg bg-blue-100 p-1 2xl:flex">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 mt-auto 2xl:gap-4">
+                  <div className="text-center">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.minTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
+                  </div>
+                  <div className="text-center border-l border-gray-200 2xl:pl-4">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.minTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
+                  </div>
+                </div>
+              </div>
+              {/* Average Temperature Card */}
+              <div className="flex flex-col p-1 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
+                <div className="flex justify-between items-center 2xl:mb-1">
+                  <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Avg Temp</span>
+                  <div className="hidden rounded-lg bg-gray-100 p-1 2xl:flex">
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 2xl:gap-4">
+                  <div className="text-center">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.ASide?.avgTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">East Side</p>
+                  </div>
+                  <div className="text-center border-l border-gray-200 2xl:pl-4">
+                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">{temperatureStats?.BSide?.avgTemp ?? "--"}</p>
+                    <p className="font-normal text-[10px] 2xl:text-sm 2xl:font-medium text-gray-500">West Side</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sensor Alerts Card */}
+              <div className="flex flex-col p-1 bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Sensor Alerts</span>
+                  <div className="hidden rounded-lg bg-amber-100 p-1 2xl:flex">
+                    <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">N/A</p>
+                <p className="mt-auto text-xs font-normal text-amber-600 2xl:text-sm 2xl:font-medium">Requires attention</p>
+              </div>
+            </div>
             {/* </div> */}
 
 
@@ -992,7 +992,7 @@ const Dashboard = () => {
 
         </div>
 
-        <div className="order-4 p-4 rounded-2xl border-2 shadow-md backdrop-blur-sm bg-white/30 xl:order-4">
+        <div className="order-4 p-2 rounded-2xl border-2 shadow-md backdrop-blur-sm bg-white/30 xl:order-4">
           <div className="relative w-full md:h-full">
             <div className="mb-4  h-[15%] flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center h-[100%] gap-2">
@@ -1027,6 +1027,7 @@ const Dashboard = () => {
                   ))}
                 </div>
               </div>
+
               <div className="relative">
                 <button
                   onClick={() => setShowLegendPopup(!showLegendPopup)}
@@ -1048,8 +1049,8 @@ const Dashboard = () => {
                   </svg>
                 </button>
                 {showLegendPopup && (
-                  <div className="absolute right-0 top-8 z-10 w-[28rem] overflow-visible rounded-lg border border-gray-200 bg-white shadow-lg">
-                    <div className="p-3 border-b border-gray-100">
+                  <div className="absolute right-0 left-1  bottom-10 z-30 w-[28rem] overflow-visible rounded-lg border border-gray-200 bg-white shadow-lg ">
+                    <div className="p-3 border-b border-gray-100 flex items-center justify-between">
                       <h4 className="text-sm font-medium text-gray-700">
                         {selectedSide} Sensors
                         <span className="ml-1 text-xs font-normal text-gray-500">
@@ -1064,6 +1065,15 @@ const Dashboard = () => {
                           active)
                         </span>
                       </h4>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowLegendPopup(false);
+                        }}
+                        className="px-2 py-1 text-xs text-blue-600 rounded transition-colors hover:bg-blue-50 hover:text-blue-800"
+                      >
+                        Close
+                      </button>
                     </div>
                     <div className="p-3">
                       <div className="grid grid-cols-3">
@@ -1136,24 +1146,11 @@ const Dashboard = () => {
                           })}
                       </div>
                     </div>
-                    <div className="p-2 text-right bg-gray-50 border-t border-gray-100">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowLegendPopup(false);
-                        }}
-                        className="px-2 py-1 text-xs text-blue-600 rounded transition-colors hover:bg-blue-50 hover:text-blue-800"
-                      >
-                        Close
-                      </button>
-                    </div>
+                
                   </div>
                 )}
               </div>
               <div className="flex flex-wrap gap-1 justify-end items-center w-full sm:w-auto">
-                <svg className="mr-1.5 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
                 <div className="inline-flex items-center rounded-lg bg-gray-50 p-0.5 shadow-inner">
                   {[
                     { value: "Live", label: "Live" },
@@ -1192,11 +1189,8 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 p-3 md:h-[400px] xl:h-[calc(100%-50px)]">
-              <div className="absolute top-2 right-4 z-10 text-xs text-gray-500">
-                {selectedSide === "ASide" ? "East Side" : "West Side"} -{" "}
-                {chartData.datasets?.length || 0} sensors
-              </div>
+            <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 md:h-[400px] xl:h-[calc(100%-50px)] 2xl:h-[calc(100%-80px)]">
+
               <Line
                 key={`${chartUpdateKey}-${selectedSide}`}
                 data={{
@@ -1317,11 +1311,12 @@ const Dashboard = () => {
                 }}
               />
             </div>
+            
           </div>
         </div>
 
-        <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl border-2 bg-white/30 p-4 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
-          <div className=" w-full h-full p-1 rounded-2xl border-2 gap-1 border-white bg-white/5 backdrop-blur-sm md:w-[40%] grid grid-cols-3 overflow-auto" style={{
+        <div className="order-5 flex w-[100%] flex-col gap-1 rounded-2xl border-2 bg-white/30 p-2 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
+          <div className=" w-full h-full p-1 gap-2 z-10 rounded-2xl border-white bg-white/5 backdrop-blur-sm md:w-[40%] grid grid-cols-3 overflow-auto" style={{
             scrollbarWidth: "thin",
             scrollbarColor: "#6B7280 transparent",
           }}>
@@ -1391,7 +1386,7 @@ const Dashboard = () => {
 
               {/* west side sensors */}
               {leftValues2.slice().map((data, i) => {
-                const sensorIndex = 24 - i; 
+                const sensorIndex = 24 - i;
 
                 return (
                   <div
