@@ -107,7 +107,7 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
             : `WS${Number(sensor.name.replace(/[^0-9]/g, "")) + 12}`}
         </h3>
 
-        <div className="flex xl:bottom-1 xl:absolute  items-baseline">
+        <div className="flex items-baseline xl:bottom-1 xl:absolute">
           <span className="text-[10px] 2xl:text-base 2xl:font-bold text-[#3047c0]">
             {sensor.value}
             <span className="text-[10px] 2xl:text-base 2xl:font-bold text-[#3047c0]">°C</span>
@@ -145,6 +145,8 @@ const Dashboard = () => {
     isLive: false,
     timestamp: "",
   });
+  // Add state for sensorComparison
+  const [sensorComparison, setSensorComparison] = useState([]);
 
   const handleTimeIntervalChange = async (interval) => {
     if (interval === timeInterval) return;
@@ -404,6 +406,14 @@ const Dashboard = () => {
         throw new Error("Invalid response format from server");
       }
 
+      // Get lastUpdated from metadata if available
+      const lastUpdated = response.data.data.metadata?.lastUpdated;
+      console.log('API lastUpdated:', lastUpdated);
+      if (lastUpdated) {
+        setLastUpdatedAt(lastUpdated);
+        console.log('Set lastUpdatedAt state:', lastUpdated);
+      }
+
       const { realtime, hourlyAverages, historical } = response.data.data;
 
       if (realtime && realtime.length > 0 && realtime[0].TIME) {
@@ -598,6 +608,45 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Fetch SensorComparison data on mount
+  useEffect(() => {
+    const fetchSensorComparison = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        const response = await API.get('/api/v2/getSensorComparison', {
+          headers: {
+            'X-User-ID': userId,
+          },
+        });
+        if (response.data && response.data.success && Array.isArray(response.data.data)) {
+          setSensorComparison(response.data.data);
+        } else {
+          setSensorComparison([]);
+        }
+      } catch (error) {
+        console.error('Error fetching sensor comparison:', error);
+        setSensorComparison([]);
+      }
+    };
+    fetchSensorComparison();
+  }, []);
+
+  // Interleave ES and WS sensors for column-major order
+  const esSensors = sensorComparison
+  .filter(item => item.sensorId.startsWith('ES'))
+  .sort((a, b) => parseInt(a.sensorId.replace('ES', '')) - parseInt(b.sensorId.replace('ES', '')));
+
+const wsSensors = sensorComparison
+  .filter(item => item.sensorId.startsWith('WS'))
+  .sort((a, b) => parseInt(a.sensorId.replace('WS', '')) - parseInt(b.sensorId.replace('WS', '')));
+
+const interleaved = [];
+for (let i = 0; i < Math.max(esSensors.length, wsSensors.length); i++) {
+  if (esSensors[i]) interleaved.push(esSensors[i]);
+  if (wsSensors[i]) interleaved.push(wsSensors[i]);
+}
+
+
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const [hoveredIndex2, setHoveredIndex2] = useState(null);
   const leftValues = [9.5, 16, 23, 30, 37, 44, 51, 58, 64.5, 71, 78, 85];
@@ -608,7 +657,7 @@ const Dashboard = () => {
       <div className="flex flex-col gap-4 p-1 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
         <div className="overflow-hidden order-2 rounded-lg xl:order-1">
           <div className="grid gap-2 h-full grid-col">
-            <div className="overflow-hidden p-2 2xl:p-4 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30">
+            <div className="overflow-hidden p-2 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm 2xl:p-4 bg-white/30">
               {/* <div className="relative"> */}
               {/* <button
                     onClick={scrollLeft}
@@ -623,8 +672,8 @@ const Dashboard = () => {
 
               <div
                 ref={scrollContainerRef}
-                // className="overflow-x-auto relative flex-1 scrollbar-custom xl:overflow-y-hidden flex flex-col gap-4"
-                className="flex flex-col gap-2 2xl:gap-4 h-full"
+                // className="flex overflow-x-auto relative flex-col flex-1 gap-4 scrollbar-custom xl:overflow-y-hidden"
+                className="flex flex-col gap-2 h-full 2xl:gap-4"
                 style={{ scrollBehavior: "smooth" }}
                 onScroll={handleScroll}
               >
@@ -644,7 +693,7 @@ const Dashboard = () => {
                       ))}
                   </div> */}
 
-                <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
+                <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
                   {wg1Sensors.map((sensor) => (
                     <div key={sensor.id}
                     // className="2xl:h-24 2xl:w-36"
@@ -654,7 +703,7 @@ const Dashboard = () => {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-6 gap-1 2xl:gap-2 h-1/2 ">
+                <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
                   {wg2Sensors.map((sensor) => (
                     <div key={sensor.id}
                     // className="2xl:h-24 2xl:w-36"
@@ -861,9 +910,17 @@ const Dashboard = () => {
                 </h5>
               </div>
               <div className="flex items-center">
-                {liveStatus.timestamp && (
+                {lastUpdatedAt && (
                   <div className="hidden items-center text-[10px] leading-tight font-normal 2xl:text-sm text-gray-500 sm:flex">
-                    <span>Last updated: <span className="font-normal text-gray-700 2xl:font-medium"> {liveStatus.timestamp || "N/A"}</span></span>
+                    <span>Last updated: <span className="font-normal text-gray-700 2xl:font-medium">  {new Date(lastUpdatedAt).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Kolkata"
+                      })}</span></span>
                   </div>
                 )}
 
@@ -888,7 +945,7 @@ const Dashboard = () => {
               <div className="flex flex-col p-1 bg-gradient-to-br from-red-50 to-white rounded-lg border border-red-100">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] 2xl:text-sm leading-tight font-normal text-red-600">Max Temp</span>
-                  <div className="hidden rounded-lg bg-red-100 p-1 2xl:flex">
+                  <div className="hidden p-1 bg-red-100 rounded-lg 2xl:flex">
                     <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                     </svg>
@@ -911,7 +968,7 @@ const Dashboard = () => {
               <div className="flex flex-col p-1 bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-100">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-normal text-blue-600 2xl:text-sm 2xl:font-medium">Min Temp</span>
-                  <div className="hidden rounded-lg bg-blue-100 p-1 2xl:flex">
+                  <div className="hidden p-1 bg-blue-100 rounded-lg 2xl:flex">
                     <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
@@ -932,7 +989,7 @@ const Dashboard = () => {
               <div className="flex flex-col p-1 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
                 <div className="flex justify-between items-center 2xl:mb-1">
                   <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Avg Temp</span>
-                  <div className="hidden rounded-lg bg-gray-100 p-1 2xl:flex">
+                  <div className="hidden p-1 bg-gray-100 rounded-lg 2xl:flex">
                     <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
                     </svg>
@@ -954,7 +1011,7 @@ const Dashboard = () => {
               <div className="flex flex-col p-1 bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100">
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">Sensor Alerts</span>
-                  <div className="hidden rounded-lg bg-amber-100 p-1 2xl:flex">
+                  <div className="hidden p-1 bg-amber-100 rounded-lg 2xl:flex">
                     <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
@@ -982,7 +1039,7 @@ const Dashboard = () => {
                   </div>
                 </div>
                 <div className="sm:col-span-1">
-                  <button onClick={handleSaveThresholds} className="px-2 py-1 w-full h-8 text-xs text-white whitespace-nowrap bg-gradient-to-r from-blue-600 to-blue-700 rounded-md shadow-sm transition-all duration-150 hover:from-blue-700 hover:to-blue-800 hover:shadow 2xl:text-sm font-normal 2xl:font-medium">
+                  <button onClick={handleSaveThresholds} className="px-2 py-1 w-full h-8 text-xs font-normal text-white whitespace-nowrap bg-gradient-to-r from-blue-600 to-blue-700 rounded-md shadow-sm transition-all duration-150 hover:from-blue-700 hover:to-blue-800 hover:shadow 2xl:text-sm 2xl:font-medium">
                     Save
                   </button>
                 </div>
@@ -1050,7 +1107,7 @@ const Dashboard = () => {
                 </button>
                 {showLegendPopup && (
                   <div className="absolute right-0 left-1  bottom-10 z-30 w-[28rem] overflow-visible rounded-lg border border-gray-200 bg-white shadow-lg ">
-                    <div className="p-3 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex justify-between items-center p-3 border-b border-gray-100">
                       <h4 className="text-sm font-medium text-gray-700">
                         {selectedSide} Sensors
                         <span className="ml-1 text-xs font-normal text-gray-500">
@@ -1321,41 +1378,16 @@ const Dashboard = () => {
             scrollbarColor: "#6B7280 transparent",
           }}>
 
-            {/* ES1-ES12 */}
-            {Array.from({ length: 12 }).map((_, i) => {
-              const sensorId = `ES${i + 1}`;
-              // Mock data - replace with actual data from your API
-              const currentAvg = 50 + Math.random() * 50; // Random value between 50-100
-              const previousAvg = 45 + Math.random() * 50; // Random value between 45-95
-
-              return (
-                <SensorComparisonCard
-                  key={sensorId}
-                  sensorId={sensorId}
-                  currentAvg={currentAvg}
-                  previousAvg={previousAvg}
-                  unit="°C"
-                />
-              );
-            })}
-
-            {/* WS13-WS24 */}
-            {Array.from({ length: 12 }).map((_, i) => {
-              const sensorId = `WS${i + 13}`;
-              // Mock data - replace with actual data from your API
-              const currentAvg = 50 + Math.random() * 50; // Random value between 50-100
-              const previousAvg = 45 + Math.random() * 50; // Random value between 45-95
-
-              return (
-                <SensorComparisonCard
-                  key={sensorId}
-                  sensorId={sensorId}
-                  currentAvg={currentAvg}
-                  previousAvg={previousAvg}
-                  unit="°C"
-                />
-              );
-            })}
+            {/* Render SensorComparisonCard for ES1-ES12 and WS13-WS24 from API data, preserving API order */}
+            {sensorComparison.map((item) => (
+              <SensorComparisonCard
+                key={item.sensorId}
+                sensorId={item.sensorId}
+                currentAvg={item.latest}
+                previousAvg={item.average}
+                unit="°C"
+              />
+            ))}
 
           </div>
 

@@ -65,11 +65,11 @@ export const createSensor = async (req, res) => {
   };
 
   // Convert N/A values to null
-  Object.keys(sensorFields).forEach(key => {
-    if (sensorFields[key] === 'N/A') {
-      sensorFields[key] = null;
-    }
-  });
+  // Object.keys(sensorFields).forEach(key => {
+  //   if (sensorFields[key] === 'N/A') {
+  //     sensorFields[key] = null;
+  //   }
+  // });
 
   try {
     const newSensor = new SensorModel({
