@@ -60,7 +60,7 @@ function App() {
                 <Route path="/Analytics" element={<Analytics />} />
                 <Route path="/Report" element={<Report />} />
                 <Route path="/Settings" element={<Settings />} />
-                <Route path="/Heatmap" element={<Heatmap />} />
+                {/* <Route path="/Heatmap" element={<Heatmap />} /> */}
                 <Route path="/Test" element={<Test />} />
               </Route>
             {/* </Route> */}
