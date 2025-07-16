@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AnalyticsButton from "../../Assets/components/Analytics/AnalyticsButton";
 import AverageDateRange from "../../Assets/components/Analytics/AverageDateRange";
 import TimeInterval from "../../Assets/components/Analytics/TimeInterval";
@@ -12,13 +12,32 @@ const Analytics = () => {
   const [selectedBusBar, setSelectedBusBar] = useState("Aside"); // Default selected BusBar is 1
   const [fetchedData, setFetchedData] = useState(null); // New state for fetched data
 
-  // Example function to handle BusBar clicks
+  // Get the data array from the response object
+  const tableData = React.useMemo(() => {
+    if (!fetchedData) return [];
+    // If data is an array, use it directly
+    if (Array.isArray(fetchedData)) return fetchedData;
+    // If data has a data property that's an array, use that
+    if (fetchedData.data) {
+      if (Array.isArray(fetchedData.data)) return fetchedData.data;
+      // If data.data is not an array but is an object, wrap it in an array
+      if (typeof fetchedData.data === 'object' && fetchedData.data !== null) {
+        return [fetchedData.data];
+      }
+    }
+    // If we have no valid data, return empty array
+    return [];
+  }, [fetchedData]);
+
+  // Function to handle BusBar clicks
   const handleBusBarClick = (busBar) => {
     setSelectedBusBar(busBar);
-    console.log(`${busBar} clicked`);
   };
-
-  // console.log("Fetched Data:", fetchedData); // Log the fetched data
+  
+  // Handle component updates
+  useEffect(() => {
+    // Component update logic can go here if needed
+  }, [selectedBusBar, selectedButton, fetchedData, tableData]);
 
   return (
 
@@ -39,7 +58,7 @@ const Analytics = () => {
                   onClick={() => handleBusBarClick("Aside")}
                 >
                   <span className="font-['Poppins'] text-sm font-medium text-white md:text-base">
-                    A Side
+                    East Side
                   </span>
                 </button>
 
@@ -49,7 +68,7 @@ const Analytics = () => {
                   onClick={() => handleBusBarClick("Bside")}
                 >
                   <span className="font-['Poppins'] text-sm font-medium text-white md:text-base">
-                    B Side
+                    West Side
                   </span>
                 </button>
 
@@ -82,24 +101,35 @@ const Analytics = () => {
             />
           )}
         </div>
-
-        <div className="scrollbar-custom mt-4 h-auto w-full bg-[rgba(16,16,16,0.7)] overflow-x-auto overflow-y-auto rounded-xl border border-white p-2 text-white backdrop-blur md:flex lg:w-full md:col-span-2 md:flex-row md:p-4 xl:w-[40%]">
-          <div className="w-full h-full">
-            {fetchedData && fetchedData.length > 0 ? (
-              <div className="overflow-auto max-h-[300px] rounded-lg border border-gray-700 shadow-lg">
-                <table className="min-w-full divide-y divide-gray-700">
-                  <thead className="bg-gray-800 sticky top-0 z-10">
+        {/* <div className="scrollbar-custom mt-4 h-auto w-full bg-[rgba(16,16,16,0.7)] overflow-x-auto overflow-y-auto rounded-xl border border-white p-2 text-white backdrop-blur md:flex lg:w-full md:col-span-2 md:flex-row md:p-4 xl:w-[40%]"> */}
+        <div className=" scrollbar-custom mt-4 w-full h-auto bg-[rgba(16,16,16,0.7)] overflow-hidden rounded-xl border items-center justify-center border-white  text-white backdrop-blur md:flex lg:w-full md:col-span-2 md:flex-row xl:w-[40%]">
+            {tableData.length > 0 ? (
+              <div className="h-full overflow-auto rounded-lg border-0 shadow-lg">
+                <table className="min-w-full divide-y divide-gray-700 bg-transparent">
+                  <thead className="bg-gray-800/90 backdrop-blur-sm sticky top-0 z-10">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-800 z-10">
-                        Timestamp
+                        {tableData[0]?.TIME || tableData[0]?.timestamp ? 'Timestamp' : 'Data'}
                       </th>
-                      {Object.keys(fetchedData[0])
-                        .filter(key => key.startsWith('sensor') || key === 'waveguide')
+                      {tableData[0] && Object.keys(tableData[0])
+                        .filter(key => {
+                          // Filter out special keys and columns where all values are N/A or empty
+                          if (key === 'TIME' || key === 'timestamp' || key === 'count') return false;
+                          
+                          // Check if all values in this column are N/A or empty
+                          const allNaOrEmpty = tableData.every(row => {
+                            const val = row[key];
+                            return val === null || val === undefined || val === '' || val === 'N/A';
+                          });
+                          
+                          return !allNaOrEmpty; // Keep columns that have at least one valid value
+                        })
                         .sort((a, b) => {
-                          // Sort sensors numerically
                           if (a.startsWith('sensor') && b.startsWith('sensor')) {
                             return parseInt(a.replace('sensor', '')) - parseInt(b.replace('sensor', ''));
                           }
+                          if (a === 'waveguide') return -1;
+                          if (b === 'waveguide') return 1;
                           return a.localeCompare(b);
                         })
                         .map((key) => (
@@ -108,15 +138,56 @@ const Analytics = () => {
                             scope="col"
                             className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap"
                           >
-                            {key === 'waveguide' ? 'Waveguide' : key.replace('sensor', 'S')}
+                            {key === 'waveguide' ? 'Sides' : 
+                              key === 'ASide' ? 'East Side' : 
+                              key === 'BSide' ? 'West Side' : 
+                              (() => {
+                                // Get the current side (East or West)
+                                const currentSide = tableData[0]?.waveguide || selectedBusBar || '';
+                                const isEast = currentSide.toString().toLowerCase().includes('a');
+                                
+                                // Extract sensor number
+                                const sensorMatch = key.match(/sensor(\d+)/i) || [];
+                                if (sensorMatch[1]) {
+                                  const sensorNum = parseInt(sensorMatch[1]);
+                                  const prefix = isEast ? 'ES' : 'WS';
+                                  const baseNum = isEast ? 1 : 13; // ES starts from 1, WS from 13
+                                  return `${prefix}${baseNum + sensorNum - 1}`; // Adjust for 1-based indexing
+                                }
+                                return key.replace('sensor', 'S'); // Fallback to original if no match
+                              })()}
                           </th>
                         ))}
+                      {tableData[0]?.count && (
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                          Count
+                        </th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="bg-gray-900 divide-y divide-gray-700">
-                    {fetchedData.map((row, index) => {
-                      const timestamp = row.timestamp || row.TIME || '';
+                    {tableData.map((row, index) => {
+                      const timestamp = row.TIME || row.timestamp || '';
                       const date = timestamp ? new Date(timestamp) : null;
+                      
+                      // Get all data keys except special fields and columns with all N/A values
+                      const dataKeys = Object.keys(row).filter(
+                        key => {
+                          if (key === 'TIME' || key === 'timestamp' || key === 'count') return false;
+                          // Check if this column has at least one non-N/A value
+                          return !tableData.every(r => {
+                            const val = r[key];
+                            return val === null || val === undefined || val === '' || val === 'N/A';
+                          });
+                        }
+                      ).sort((a, b) => {
+                        if (a.startsWith('sensor') && b.startsWith('sensor')) {
+                          return parseInt(a.replace('sensor', '')) - parseInt(b.replace('sensor', ''));
+                        }
+                        if (a === 'waveguide') return -1;
+                        if (b === 'waveguide') return 1;
+                        return a.localeCompare(b);
+                      });
                       
                       return (
                         <tr 
@@ -131,46 +202,31 @@ const Analytics = () => {
                               </div>
                             ) : 'N/A'}
                           </td>
-                          {Object.entries(row)
-                            .filter(([key]) => key.startsWith('sensor') || key === 'waveguide')
-                            .sort(([a], [b]) => {
-                              // Sort sensors numerically
-                              if (a.startsWith('sensor') && b.startsWith('sensor')) {
-                                return parseInt(a.replace('sensor', '')) - parseInt(b.replace('sensor', ''));
-                              }
-                              return a.localeCompare(b);
-                            })
-                            .map(([key, value], i) => {
-                              const isSensor = key.startsWith('sensor');
-                              const numericValue = typeof value === 'number' ? value : parseFloat(value);
-                              const isNumber = !isNaN(numericValue);
-                              
-                              // Determine color based on value
-                              let textColor = 'text-gray-300';
-                              if (isNumber) {
-                                if (numericValue < 60) textColor = 'text-blue-300';
-                                else if (numericValue < 70) textColor = 'text-green-400';
-                                else if (numericValue < 80) textColor = 'text-yellow-400';
-                                else if (numericValue < 90) textColor = 'text-orange-500';
-                                else textColor = 'text-red-500';
-                              }
-                              
-                              return (
-                                <td 
-                                  key={`${index}-${key}`} 
-                                  className={`px-4 py-2 text-center text-sm ${textColor} whitespace-nowrap`}
-                                  title={isNumber ? `${key}: ${numericValue.toFixed(2)}°C` : `${key}: ${value}`}
-                                >
-                                  {isNumber ? (
-                                    <span className={`px-2 py-1 rounded ${isSensor ? 'bg-gray-800/50' : ''}`}>
-                                      {numericValue.toFixed(2)}°C
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400">{value}</span>
-                                  )}
-                                </td>
-                              );
-                            })}
+                          {dataKeys.map((key) => {
+                            const value = row[key];
+                            return (
+                              <td 
+                                key={`${index}-${key}`} 
+                                className="px-4 py-2 text-center text-sm text-gray-200 whitespace-nowrap"
+                                title={`${key}: ${value}`}
+                              >
+                                {(() => {
+                                  if (value === null || value === undefined || value === '' || value === 'N/A') return null;
+                                  if (key === 'waveguide') {
+                                    if (value === 'ASide' || value === 'A' || value === 'Aside' || value === 'aside') return 'East Side';
+                                    if (value === 'BSide' || value === 'B' || value === 'Bside' || value === 'bside') return 'West Side';
+                                    return value;
+                                  }
+                                  return value;
+                                })()}
+                              </td>
+                            );
+                          })}
+                          {row.count !== undefined && (
+                            <td className="px-4 py-2 text-center text-sm text-gray-200 whitespace-nowrap">
+                              {row.count}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -178,8 +234,8 @@ const Analytics = () => {
                 </table>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-48 text-gray-400">
-                <svg 
+              <div className="flex flex-col items-center justify-center h-48 text-gray-400 ">
+                  <svg 
                   className="w-12 h-12 mb-2 text-gray-600" 
                   fill="none" 
                   stroke="currentColor" 
@@ -198,16 +254,16 @@ const Analytics = () => {
                   <br />
                   <span className="text-sm">Select filters and click "Fetch Data" to view results.</span>
                 </p>
+
+                
               </div>
             )}
           </div>
-        </div>
       </div>
 
-      <div className="flex-1 h-[700px]  md:h-[56%]  rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:w-full  ">
-        <div className="h-full w-full">
-          <AnalyticsChart data={fetchedData} />
-        </div>
+      <div className="flex-1 h-[700px]  md:h-[56%]  rounded-xl border border-white bg-[rgba(16,16,16,0.6)] backdrop-blur md:w-full ">
+          <AnalyticsChart data={fetchedData} />  
+          {/* console.log("fetchedData", fetchedData); */}
       </div>
 
     </div>

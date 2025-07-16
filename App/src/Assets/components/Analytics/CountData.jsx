@@ -21,11 +21,10 @@ const CountData = ({ selectedBusBar, setFetchedData }) => {
     }
     try {
       let limit = selectedDrop === "custom" ? customLimit : selectedDrop;
-      const busBarVariable = `sensormodel${selectedBusBar}`;
       const apidate = async () => {
         try {
           const response = await API.get(
-            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportCountData?sensorrange=all-data&sides=${busBarVariable}&count=${limit}`
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportCountData?sensorrange=all-data&sides=${selectedBusBar}&count=${limit}`
           );
           const data = response.data;
           setFetchedData(data);

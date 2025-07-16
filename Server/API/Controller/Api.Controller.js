@@ -238,179 +238,175 @@ class ApiController {
   }
 
   async _getHourlyData(id, startDate, endDate) {
-    // Fetch documents for the given time range
-    const docs = await sensormodel.find({
-      id: id,
-      createdAt: { $gte: startDate, $lt: endDate },
-      waveguide: { $in: ['WG1', 'WG2'] }
-    }).sort({ createdAt: -1 }).lean();
+    try {
+      // Fetch all documents in the time range
+      const docs = await sensormodel.find({
+        id,
+        updatedAt: { $gte: startDate, $lt: endDate },
+        waveguide: { $in: ['WG1', 'WG2'] }
+      }).lean();
 
-    // Initialize hourly buckets
-    const hourlyData = Array.from({ length: 24 }, () => ({
-      WG1: [],
-      WG2: []
-    }));
+      // Initialize hourlyData for 24 hours
+      const hourlyData = Array(24).fill().map(() => ({ WG1: [], WG2: [] }));
 
-    // Process documents into hourly buckets (most recent first)
-    for (const doc of docs) {
-      const hour = new Date(doc.createdAt).getHours();
-      const waveguide = doc.waveguide;
-
-      // Only add if we don't have data for this hour and waveguide yet
-      if (hourlyData[hour][waveguide].length === 0) {
-        // Collect all sensor values
-        const values = [];
+      // Process each document
+      docs.forEach(doc => {
+        const hour = new Date(doc.updatedAt).getHours();
+        const waveguide = doc.waveguide;
+        
+        // Process each sensor from 1 to 38
         for (let i = 1; i <= 38; i++) {
-          const value = parseFloat(doc[`sensor${i}`]);
-          if (!isNaN(value)) values.push(value);
+          const key = `sensor${i}`;
+          const value = doc[key];
+          
+          // Skip "N/A" and non-numeric values
+          if (value === "N/A") continue;
+          
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            if (waveguide === 'WG1') {
+              hourlyData[hour].WG1.push(num);
+            } else if (waveguide === 'WG2') {
+              hourlyData[hour].WG2.push(num);
+            }
+          }
         }
+      });
 
-        if (values.length > 0) {
-          hourlyData[hour][waveguide] = values; // Store the first valid reading we find
-        }
-      }
+      return hourlyData;
+    } catch (error) {
+      console.error(`[ERROR] _getHourlyData: ${error}`);
+      // Return empty hourly data structure on error
+      return Array(24).fill().map(() => ({ WG1: [], WG2: [] }));
     }
-
-    return hourlyData;
   }
 
   // Fetch and process historical data with hourly bucketing
   async _fetchHistoricalData(userId, waveguide, startTime, endTime) {
-    // Fetch documents for the specified time range
-    const docs = await sensormodel.find({
-      id: userId,
-      waveguide: waveguide,
-      createdAt: { $gte: startTime, $lt: endTime }
-    }).sort({ createdAt: 1 }).lean();
+    try {
+      // Fetch all documents in the time range
+      const docs = await sensormodel.find({
+        id: userId,
+        waveguide: waveguide,
+        createdAt: { $gte: startTime, $lt: endTime }
+      }).sort({ createdAt: 1 }).lean();
 
-    // Initialize data structures
-    const hourlyData = new Map();
-    const allSensorValues = [];
+      // Initialize data structures
+      const hourlyData = new Map();
+      const allSensorValues = [];
 
-    // Process each document into hourly buckets
-    docs.forEach(doc => {
-      const timestamp = new Date(doc.createdAt);
-      const hour = timestamp.getHours();
-      const dateKey = timestamp.toISOString().split('T')[0];
-      const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
+      // Process each document
+      docs.forEach(doc => {
+        const timestamp = new Date(doc.createdAt);
+        const hour = timestamp.getHours();
+        const dateKey = timestamp.toISOString().split('T')[0];
+        const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
 
-      if (!hourlyData.has(hourKey)) {
-        hourlyData.set(hourKey, {
-          timestamp: new Date(timestamp).setMinutes(0, 0, 0),
-          dataPoints: []  // Store all data points for this hour
-        });
-      }
-
-      // Store the complete document for this hour
-      const hourData = hourlyData.get(hourKey);
-
-      // Process all sensors for this document
-      const sensorReadings = {};
-      for (let i = 1; i <= 38; i++) {
-        const sensorKey = `sensor${i}`;
-        const value = parseFloat(doc[sensorKey]);
-        if (!isNaN(value)) {
-          sensorReadings[sensorKey] = value;
-          allSensorValues.push({
-            sensor: sensorKey,
-            value: value,
-            side: waveguide === 'WG1' ? 'ASide' : 'BSide',
-            timestamp: doc.createdAt
+        // Initialize hourly bucket if it doesn't exist
+        if (!hourlyData.has(hourKey)) {
+          hourlyData.set(hourKey, {
+            timestamp: new Date(timestamp).setMinutes(0, 0, 0),
+            dataPoints: []
           });
         }
-      }
 
-      // Only add if we have valid sensor readings
-      if (Object.keys(sensorReadings).length > 0) {
-        hourData.dataPoints.push({
-          timestamp: doc.createdAt,
-          sensors: sensorReadings
-        });
-      }
-    });
+        const hourData = hourlyData.get(hourKey);
+        const sensorReadings = {};
 
-    // Process hourly data into response format
-    const sensorData = [];
-
-    // Convert map to array and sort by timestamp
-    const sortedHours = Array.from(hourlyData.entries())
-      .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
-
-    // Process each hour
-    for (const [_, hourData] of sortedHours) {
-      const timestamp = new Date(hourData.timestamp);
-      const hour = timestamp.getHours();
-
-      // Format timestamp for display
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      const timeString = `${hour12}:00 ${period}`;
-
-      // Prepare sensor data for this hour
-      const hourSensorData = {
-        timestamp: timeString,
-        dataPoints: hourData.dataPoints,  // Include all data points
-        stats: {
-          avgTemp: 0,
-          minTemp: Infinity,
-          maxTemp: -Infinity,
-          totalReadings: hourData.dataPoints.length
+        // Process each sensor (1-38)
+        for (let i = 1; i <= 38; i++) {
+          const sensorKey = `sensor${i}`;
+          const value = doc[sensorKey];
+          
+          // Skip "N/A" values
+          if (value === "N/A") continue;
+          
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            sensorReadings[sensorKey] = num;
+            allSensorValues.push({
+              sensor: sensorKey,
+              value: num,
+              side: waveguide === 'WG1' ? 'ASide' : 'BSide',
+              timestamp: doc.createdAt
+            });
+          }
         }
-      };
 
-      // Calculate statistics across all data points
-      const allTemps = [];
-
-      hourData.dataPoints.forEach(dataPoint => {
-        const temps = Object.values(dataPoint.sensors);
-        allTemps.push(...temps);
-
-        // Update min/max
-        const pointMin = Math.min(...temps);
-        const pointMax = Math.max(...temps);
-        hourSensorData.stats.minTemp = Math.min(hourSensorData.stats.minTemp, pointMin);
-        hourSensorData.stats.maxTemp = Math.max(hourSensorData.stats.maxTemp, pointMax);
+        // Only add if we have valid sensor readings
+        if (Object.keys(sensorReadings).length > 0) {
+          hourData.dataPoints.push({
+            timestamp: doc.createdAt,
+            sensors: sensorReadings
+          });
+        }
       });
 
-      // Calculate average temperature for this hour
-      if (allTemps.length > 0) {
-        hourSensorData.stats.avgTemp = parseFloat(
-          (allTemps.reduce((sum, val) => sum + val, 0) / allTemps.length).toFixed(2)
-        );
-      } else {
-        hourSensorData.stats.minTemp = 0;
-        hourSensorData.stats.maxTemp = 0;
-      }
+      // Process hourly data into response format
+      const sensorData = [];
 
-      sensorData.push(hourSensorData);
-    }
+      // Convert map to array and sort by timestamp
+      const sortedHours = Array.from(hourlyData.entries())
+        .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
 
-    // Calculate statistics
-    const sideValues = allSensorValues.reduce((acc, { sensor, value, side }) => {
-      if (!acc[side]) {
-        acc[side] = [];
-      }
-      acc[side].push(value);
-      return acc;
-    }, {});
+      // Process each hour
+      for (const [_, hourData] of sortedHours) {
+        const timestamp = new Date(hourData.timestamp);
+        const hour = timestamp.getHours();
 
-    const stats = {};
+        // Format timestamp for display
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const timeString = `${hour12}:00 ${period}`;
 
-    // Calculate stats for each side
-    for (const [side, values] of Object.entries(sideValues)) {
-      if (values.length > 0) {
-        stats[side] = {
-          maxTemp: Math.max(...values).toFixed(1),
-          minTemp: Math.min(...values).toFixed(1),
-          avgTemp: (values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1)
+        // Calculate statistics for this hour
+        const allTemps = [];
+        hourData.dataPoints.forEach(dp => {
+          allTemps.push(...Object.values(dp.sensors));
+        });
+
+        const stats = {
+          avgTemp: 0,
+          minTemp: allTemps.length > 0 ? Math.min(...allTemps) : 0,
+          maxTemp: allTemps.length > 0 ? Math.max(...allTemps) : 0,
+          totalReadings: allTemps.length
         };
-      }
-    }
 
-    return {
-      sensorData,
-      stats
-    };
+        if (allTemps.length > 0) {
+          stats.avgTemp = parseFloat((allTemps.reduce((a, b) => a + b, 0) / allTemps.length).toFixed(2));
+        }
+
+        sensorData.push({
+          timestamp: timeString,
+          dataPoints: hourData.dataPoints,
+          stats
+        });
+      }
+
+      // Calculate overall statistics
+      const sideValues = allSensorValues.reduce((acc, { value, side }) => {
+        if (!acc[side]) acc[side] = [];
+        acc[side].push(value);
+        return acc;
+      }, {});
+
+      const stats = {};
+      for (const [side, values] of Object.entries(sideValues)) {
+        if (values.length > 0) {
+          stats[side] = {
+            maxTemp: Math.max(...values).toFixed(1),
+            minTemp: Math.min(...values).toFixed(1),
+            avgTemp: (values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1)
+          };
+        }
+      }
+
+      return { sensorData, stats };
+    } catch (error) {
+      console.error(`[ERROR] _fetchHistoricalData: ${error}`);
+      // Return empty structure on error
+      return { sensorData: [], stats: {} };
+    }
   }
   v
   // Helper function to calculate average temperature from sensor data
@@ -427,6 +423,186 @@ class ApiController {
     }
 
     return count > 0 ? sum / count : 0;
+  }
+
+  // Helper function to sort sensor comparison results
+  sortSensorComparison(results) {
+    return results.sort((a, b) => {
+      // Extract numeric part and subtract 12 for WS sensors to get proper sorting
+      const numA = a.sensorId.startsWith('WS') ? parseInt(a.sensorId.replace('WS', '')) - 12 : parseInt(a.sensorId.replace('ES', ''));
+      const numB = b.sensorId.startsWith('WS') ? parseInt(b.sensorId.replace('WS', '')) - 12 : parseInt(b.sensorId.replace('ES', ''));
+      return numA - numB;
+    });
+  }
+
+  async getSensorComparisonData(id) {
+    try {
+      // Helper to get sensor key for DB
+      const getSensorKey = (side, idx) => `sensor${idx}`;
+      // Helper to get sensor label for frontend
+      const getSensorLabel = (side, idx) => {
+        if (side === 'ASide') {
+          return `ES${idx}`;
+        } else {
+          // For BSide, convert idx (1-12) to WS13-WS24
+          return `WS${12 + idx}`;
+        }
+      };
+
+      // WG1: ES1-ES12 (sensor1-sensor12)
+      // WG2: WS13-WS24 (sensor1-sensor12 in WG2, but label as WS13-WS24)
+      const sensors = [];
+      for (let i = 1; i <= 12; i++) {
+        sensors.push({ side: 'ASide', idx: i });
+        sensors.push({ side: 'BSide', idx: i });
+      }
+
+      // Get yesterday's date
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // Fetch averages for both waveguides
+      const [wg1Avg, wg2Avg] = await Promise.all([
+        sensormodel.aggregate([
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  {
+                    $dateToString: {
+                      format: '%Y-%m-%d',
+                      date: '$createdAt'
+                    }
+                  },
+                  yesterdayStr
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              sensor1: 1,
+              sensor2: 1,
+              sensor3: 1,
+              sensor4: 1,
+              sensor5: 1,
+              sensor6: 1,
+              sensor7: 1,
+              sensor8: 1,
+              sensor9: 1,
+              sensor10: 1,
+              sensor11: 1,
+              sensor12: 1
+            }
+          }
+        ]),
+        sensormodel.aggregate([
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  {
+                    $dateToString: {
+                      format: '%Y-%m-%d',
+                      date: '$createdAt'
+                    }
+                  },
+                  yesterdayStr
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              sensor1: 1,
+              sensor2: 1,
+              sensor3: 1,
+              sensor4: 1,
+              sensor5: 1,
+              sensor6: 1,
+              sensor7: 1,
+              sensor8: 1,
+              sensor9: 1,
+              sensor10: 1,
+              sensor11: 1,
+              sensor12: 1
+            }
+          }
+        ])
+      ]);
+
+      // Fetch latest for both waveguides
+      const [latestWG1, latestWG2] = await Promise.all([
+        sensormodel.findOne({ id, waveguide: 'WG1' }).sort({ createdAt: -1 }).lean(),
+        sensormodel.findOne({ id, waveguide: 'WG2' }).sort({ createdAt: -1 }).lean(),
+      ]);
+
+      const results = sensors.map(({ side, idx }) => {
+        const sensorKey = getSensorKey(side, idx);
+        // Get average from yesterday's data
+        const avgData = side === 'ASide' ? wg1Avg[0] : wg2Avg[0];
+        const avg = avgData ? Number(avgData[sensorKey].toFixed(2)) : null;
+        // Latest value
+        const latestDoc = side === 'ASide' ? latestWG1 : latestWG2;
+        const latestVal = latestDoc && latestDoc[sensorKey] !== undefined ? parseFloat(latestDoc[sensorKey]) : null;
+        // Trend
+        let trend = 'normal';
+        if (avg !== null && latestVal !== null) {
+          if (latestVal < avg) trend = 'low';
+          else if (latestVal > avg) trend = 'high';
+        }
+        // Sensor label
+        const label = getSensorLabel(side, idx);
+        return {
+          sensorId: label,
+          average: avg,
+          latest: latestVal !== null ? Number(latestVal.toFixed(2)) : null,
+          trend,
+        };
+      });
+
+      return this.sortSensorComparison(results);
+    } catch (error) {
+      console.error('Error in getSensorComparisonData:', error);
+      throw error;
+    }
   }
 
   async getDashboardAPi(req, res) {
@@ -593,6 +769,12 @@ class ApiController {
         });
       }
 
+      // Fetch sensor comparison data
+      const sensorComparison = await this.getSensorComparisonData(id);
+
+      // Get the last updated time from database
+      const lastUpdated = latestWG1?.updatedAt || latestWG2?.updatedAt || new Date();
+
       // Prepare the unified response
       const response = {
         success: true,
@@ -601,7 +783,8 @@ class ApiController {
             interval,
             startTime: startTime.toISOString(),
             endTime: endTime.toISOString(),
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            lastUpdated: lastUpdated.toISOString()
           },
           realtime: realtimeData,
           historical: {
@@ -620,7 +803,8 @@ class ApiController {
               avgTemp: `${historicalWG2.stats.BSide.avgTemp}°C`
             } : null
           },
-          hourlyAverages: tableData
+          hourlyAverages: tableData,
+          SensorComparison: sensorComparison
         },
         message: 'Dashboard data fetched successfully'
       };
@@ -2310,48 +2494,31 @@ class ApiController {
   async getThresholds(req, res) {
     try {
       const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
-      const { sensorId, side } = req.query;
 
       // Validate required parameters
       if (!userId) {
         return res.status(400).json({
+          success: false,
           error: 'User ID is required in headers (X-User-ID or x-user-id)'
         });
       }
 
-      // Build query
-      const query = { userId };
-      
-      if (sensorId) {
-        // Validate sensorId format if provided
-        const sensorNum = parseInt(sensorId.replace('sensor', ''));
-        if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
-          return res.status(400).json({
-            error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
-          });
-        }
-        query.sensorId = sensorId;
-      }
-      
-      if (side) {
-        // Validate side if provided
-        const validSides = ['Aside', 'Bside'];
-        if (!validSides.includes(side)) {
-          return res.status(400).json({
-            error: 'Invalid side parameter. Must be "Aside" or "Bside"'
-          });
-        }
-        query.side = side;
-      }
-
-      const thresholds = await Threshold.find(query)
-        .sort({ sensorId: 1, side: 1 })
+      // Find threshold for the user
+      const threshold = await Threshold.findOne({ userId })
         .select('-__v -createdAt -updatedAt');
+
+      // If no threshold exists, return default values
+      if (!threshold) {
+        return res.json({
+          success: true,
+          data: null,
+          message: 'No threshold settings found for this user'
+        });
+      }
 
       res.json({
         success: true,
-        count: thresholds.length,
-        data: thresholds
+        data: threshold
       });
     } catch (error) {
       console.error('Error getting thresholds:', error);
@@ -2363,81 +2530,63 @@ class ApiController {
     }
   }
 
-  async setThreshold(req, res) {
+  /**
+   * Set thresholds for a user (min/max) and store userId with it.
+   * Accepts userId from req.body or req.headers.
+   * POST /setThresholds
+   * Body: { minThreshold, maxThreshold, userId }
+   * Header: X-User-ID (optional)
+   */
+  async setThresholds(req, res) {
     try {
-      const userId = req.headers['x-user-id'] || req.headers['X-User-ID'];
-      const { sensorId, side, minThreshold, maxThreshold } = req.body;
+      // Accept userId from body or headers
+      const userId = req.body.userId || req.headers['x-user-id'] || req.headers['X-User-ID'];
+      const { minThreshold, maxThreshold } = req.body;
 
-      // Validate required parameters
       if (!userId) {
         return res.status(400).json({
           success: false,
-          error: 'User ID is required in headers (X-User-ID or x-user-id)'
+          error: 'User ID is required in body or headers',
         });
       }
-
-      if (!sensorId || side === undefined || minThreshold === undefined || maxThreshold === undefined) {
+      if (minThreshold === undefined || maxThreshold === undefined) {
         return res.status(400).json({
           success: false,
-          error: 'Missing required parameters: sensorId, side, minThreshold, and maxThreshold are required'
+          error: 'Missing required parameters. Required: minThreshold, maxThreshold',
         });
       }
-
-      // Validate sensorId format
-      const sensorNum = parseInt(sensorId.replace('sensor', ''));
-      if (isNaN(sensorNum) || sensorNum < 1 || sensorNum > 38) {
+      if (isNaN(minThreshold) || isNaN(maxThreshold)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid sensorId. Must be in format sensor1 to sensor38'
+          error: 'Thresholds must be numbers',
         });
       }
-
-      // Validate side
-      const validSides = ['Aside', 'Bside'];
-      if (!validSides.includes(side)) {
+      if (Number(maxThreshold) <= Number(minThreshold)) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid side parameter. Must be "Aside" or "Bside"'
+          error: 'maxThreshold must be greater than minThreshold',
         });
       }
-
-      // Validate thresholds
-      if (typeof minThreshold !== 'number' || typeof maxThreshold !== 'number') {
-        return res.status(400).json({
-          success: false,
-          error: 'minThreshold and maxThreshold must be numbers'
-        });
-      }
-
-      if (minThreshold >= maxThreshold) {
-        return res.status(400).json({
-          success: false,
-          error: 'maxThreshold must be greater than minThreshold'
-        });
-      }
-
-      // Create or update the threshold
+      // Upsert threshold for user
       const threshold = await Threshold.findOneAndUpdate(
-        { userId, sensorId, side },
+        { userId },
         { minThreshold, maxThreshold },
         { new: true, upsert: true, runValidators: true }
       );
-
       res.status(200).json({
         success: true,
         message: 'Threshold saved successfully',
-        data: threshold
+        data: threshold,
       });
     } catch (error) {
-      console.error('Error setting threshold:', error);
+      console.error('Error in setThreshold:', error);
       res.status(500).json({
         success: false,
         error: 'Failed to save threshold',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
       });
     }
   }
-
 
   async getSensorData(req, res) {
     try {
@@ -2613,6 +2762,183 @@ class ApiController {
         error: 'An error occurred while fetching sensor data',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
+    }
+  }
+
+  async getSensorComparison(req, res) {
+    try {
+      const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'User ID is required in headers',
+        });
+      }
+      // Helper to get sensor key for DB
+      const getSensorKey = (side, idx) => `sensor${idx}`;
+      // Helper to get sensor label for frontend
+      const getSensorLabel = (side, idx) => {
+        if (side === 'ASide') {
+          return `ES${idx}`;
+        } else {
+          // For BSide, convert idx (1-12) to WS13-WS24
+          return `WS${12 + idx}`;
+        }
+      };
+
+      // WG1: ES1-ES12 (sensor1-sensor12)
+      // WG2: WS13-WS24 (sensor1-sensor12 in WG2, but label as WS13-WS24)
+      const sensors = [];
+      for (let i = 1; i <= 12; i++) {
+        sensors.push({ side: 'ASide', idx: i });
+        sensors.push({ side: 'BSide', idx: i });
+      }
+
+      // Get yesterday's date
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      // Fetch averages for both waveguides
+      const [wg1Avg, wg2Avg] = await Promise.all([
+        sensormodel.aggregate([
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  {
+                    $dateToString: {
+                      format: '%Y-%m-%d',
+                      date: '$createdAt'
+                    }
+                  },
+                  yesterdayStr
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              sensor1: 1,
+              sensor2: 1,
+              sensor3: 1,
+              sensor4: 1,
+              sensor5: 1,
+              sensor6: 1,
+              sensor7: 1,
+              sensor8: 1,
+              sensor9: 1,
+              sensor10: 1,
+              sensor11: 1,
+              sensor12: 1
+            }
+          }
+        ]),
+        sensormodel.aggregate([
+          {
+            $match: {
+              $expr: {
+                $eq: [
+                  {
+                    $dateToString: {
+                      format: '%Y-%m-%d',
+                      date: '$createdAt'
+                    }
+                  },
+                  yesterdayStr
+                ]
+              }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
+            }
+          },
+          {
+            $project: {
+              _id: 0,
+              sensor1: 1,
+              sensor2: 1,
+              sensor3: 1,
+              sensor4: 1,
+              sensor5: 1,
+              sensor6: 1,
+              sensor7: 1,
+              sensor8: 1,
+              sensor9: 1,
+              sensor10: 1,
+              sensor11: 1,
+              sensor12: 1
+            }
+          }
+        ])
+      ]);
+
+      // Fetch latest for both waveguides
+      const [latestWG1, latestWG2] = await Promise.all([
+        sensormodel.findOne({ id, waveguide: 'WG1' }).sort({ createdAt: -1 }).lean(),
+        sensormodel.findOne({ id, waveguide: 'WG2' }).sort({ createdAt: -1 }).lean(),
+      ]);
+
+      const results = sensors.map(({ side, idx }) => {
+        const sensorKey = getSensorKey(side, idx);
+        // Get average from yesterday's data
+        const avgData = side === 'ASide' ? wg1Avg[0] : wg2Avg[0];
+        const avg = avgData ? Number(avgData[sensorKey].toFixed(2)) : null;
+        // Latest value
+        const latestDoc = side === 'ASide' ? latestWG1 : latestWG2;
+        const latestVal = latestDoc && latestDoc[sensorKey] !== undefined ? parseFloat(latestDoc[sensorKey]) : null;
+        // Trend
+        let trend = 'normal';
+        if (avg !== null && latestVal !== null) {
+          if (latestVal < avg) trend = 'low';
+          else if (latestVal > avg) trend = 'high';
+        }
+        // Sensor label
+        const label = getSensorLabel(side, idx);
+        return {
+          sensorId: label,
+          average: avg,
+          latest: latestVal !== null ? Number(latestVal.toFixed(2)) : null,
+          trend,
+        };
+      });
+
+      res.json({ success: true, data: results });
+    } catch (error) {
+      console.error('Error in getSensorComparison:', error);
+      res.status(500).json({ success: false, error: error.message });
     }
   }
 }

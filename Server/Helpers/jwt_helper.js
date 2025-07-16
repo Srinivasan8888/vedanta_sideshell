@@ -30,16 +30,15 @@ export const signAccessToken = (userId, role) => {
       const redisKey = `accessToken:${userId}`;
       console.log("Setting access token in Redis...");
       
-      client.SETEX(redisKey, 24 * 60 * 60, token)
-      // client.SETEX(redisKey, 60, token)
-        .then(reply => {
-          console.log("Finished setting access token in Redis.");
-          resolve(token);
-        })
-        .catch(err => {
+      client.setex(redisKey, 24 * 60 * 60, token, (err, reply) => {
+        if (err) {
           console.log("Error setting access token in Redis:", err.message);
           reject(createError.InternalServerError());
-        });
+          return;
+        }
+        console.log("Finished setting access token in Redis.");
+        resolve(token);
+      });
     });
   });
 };
@@ -86,14 +85,22 @@ export const verifyAccessToken = async (req, res, next) => {
       return next(createError.Unauthorized("Invalid audience claim"));
     }
 
-    // Redis token validation
+    // Redis token validation - wrap in Promise to handle async callback
     const redisKey = `accessToken:${userId}`;
-    const storedToken = await client.GET(redisKey).catch((err) => {
-      // console.error("Redis error:", err.message);
-      throw createError.InternalServerError("Session validation failed");
+    const storedTokenPromise = new Promise((resolve, reject) => {
+      client.get(redisKey, (err, storedToken) => {
+        if (err) {
+          console.error("Redis error:", err.message);
+          reject(createError.InternalServerError("Session validation failed"));
+          return;
+        }
+        resolve(storedToken);
+      });
     });
 
-    if (token !== storedToken) {
+    const storedToken = await storedTokenPromise;
+    
+    if (!storedToken || token !== storedToken) {
       // Send unauthorized response if tokens do not match
       return res.status(401).json({ message: "Unauthorized: Session expired or invalid" });
     }
@@ -132,15 +139,15 @@ export const signRefreshToken = (userId) => {
       }
       console.log("Setting refresh token in Redis...");
       const redisKey = `refreshToken:${userId.toString()}`;
-      client.SETEX(redisKey, 24 * 60 * 60, token)
-        .then(reply => {
-          console.log("Successfully stored refresh token");
-          resolve(token);
-        })
-        .catch(err => {
+      client.setex(redisKey, 24 * 60 * 60, token, (err, reply) => {
+        if (err) {
           console.log("Redis storage error:", err.message);
           reject(createError.InternalServerError("Token storage failed"));
-        });
+          return;
+        }
+        console.log("Successfully stored refresh token");
+        resolve(token);
+      });
     });
   });
 };
@@ -164,7 +171,16 @@ export const verifyRefreshToken = (refreshToken) => {
 
           const userId = payload.aud;
           const redisKey = `refreshToken:${userId}`;
-          const storedToken = await client.GET(redisKey);
+          client.get(redisKey, (err, storedToken) => {
+            if (err) {
+              console.error("Redis error:", err.message);
+              return reject(createError.InternalServerError("Token verification failed"));
+            }
+            if (!storedToken || storedToken !== refreshToken) {
+              return reject(createError.Unauthorized("Refresh token revoked"));
+            }
+            resolve(userId);
+          });
           
           if (!storedToken || storedToken !== refreshToken) {
             return reject(createError.Unauthorized("Refresh token revoked"));
