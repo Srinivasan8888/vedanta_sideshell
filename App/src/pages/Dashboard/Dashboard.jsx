@@ -101,18 +101,20 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
       </div>
 
       <div className="flex flex-col gap-0 2xl:gap-4">
-        <h3 className="flex truncate text-[8px] leading-tight text-[#1e2c74] 2xl:text-lg 2xl:font-semibold">
-          {sensor.name.includes("A")
-            ? `ES${sensor.name.replace(/[^0-9]/g, "")}`
-            : `WS${Number(sensor.name.replace(/[^0-9]/g, "")) + 12}`}
+        <h3 className="flex truncate text-[8px] leading-tight 2xl:text-lg text-[#3047c0]  2xl:font-semibold">
+
+
+          {sensor.value}
+          <span className="text-[10px] text-[#3047c0]  2xl:text-base 2xl:font-bold">
+            °C
+          </span>
         </h3>
 
         <div className="flex items-baseline xl:absolute xl:bottom-1">
-          <span className="text-[10px] text-[#3047c0] 2xl:text-base 2xl:font-bold">
-            {sensor.value}
-            <span className="text-[10px] text-[#3047c0] 2xl:text-base 2xl:font-bold">
-              °C
-            </span>
+          <span className="text-[10px]  text-[#1e2c74]  2xl:text-base 2xl:font-semibold">
+            {sensor.name.includes("A")
+              ? `ES${sensor.name.replace(/[^0-9]/g, "")}`
+              : `WS${Number(sensor.name.replace(/[^0-9]/g, "")) + 12}`}
           </span>
         </div>
       </div>
@@ -691,17 +693,7 @@ const Dashboard = () => {
         <div className="overflow-hidden order-2 rounded-lg xl:order-1">
           <div className="grid gap-2 h-full grid-col">
             <div className="overflow-hidden p-2 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30 2xl:p-4">
-              {/* <div className="relative"> */}
-              {/* <button
-                    onClick={scrollLeft}
-                    className="flex absolute left-0 top-1/2 z-10 justify-center items-center w-10 h-10 rounded-full shadow-md backdrop-blur-sm transition-all duration-300 ease-in-out transform -translate-y-1/2 bg-white/50 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    style={{ marginLeft: '8px' }}
-                    aria-label="Scroll Left"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                    </svg>
-                  </button> */}
+
 
               <div
                 ref={scrollContainerRef}
@@ -710,82 +702,62 @@ const Dashboard = () => {
                 style={{ scrollBehavior: "smooth" }}
                 onScroll={handleScroll}
               >
-                {/* <div className="inline-flex w-full min-w-max xl:space-x-1 2xl:space-x-2 2xl:px-1">
-                    {Array(Math.ceil(wg1Sensors.length / 2))
-                      .fill()
-                      .map((_, rowIndex) => (
-                        <div key={`wg1-${rowIndex}`} className="flex flex-col">
-                          {wg1Sensors
-                            .slice(rowIndex * 2, rowIndex * 2 + 2)
-                            .map((sensor) => (
-                              <div key={sensor.id} className="2xl:h-24 2xl:w-36">
-                                <SensorCard sensor={sensor} />
-                              </div>
-                            ))}
-                        </div>
-                      ))}
-                  </div> */}
 
+                {/* For ES1–ES12 */}
                 <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
-                  {wg1Sensors.map((sensor) => (
-                    <div
-                      key={sensor.id}
-                      // className="2xl:h-24 2xl:w-36"
-                    >
-                      <SensorCard sensor={sensor} />
-                    </div>
-                  ))}
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const label = `ES${i + 1}`;
+                    // Find the sensor in mappedES, or use a placeholder
+                    const sensor = mappedES[label] || {
+                      id: label,
+                      name: `ASide Sensor ${i + 1}`,
+                      value: "N/A",
+                      difference: "N/A",
+                      isPositive: false,
+                      waveguide: "WG1",
+                      timestamp: "",
+                      isValid: false,
+                    };
+                    return (
+                      <div key={sensor.id}>
+                        <SensorCard sensor={sensor} />
+                      </div>
+                    );
+                  })}
                 </div>
 
+                {/* For WS13–WS24 */}
                 <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
-                  {wg2Sensors.map((sensor) => (
-                    <div
-                      key={sensor.id}
-                      // className="2xl:h-24 2xl:w-36"
-                    >
-                      <SensorCard sensor={sensor} />
-                    </div>
-                  ))}
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const wsNum = 13 + i;
+                    const label = `WS${wsNum}`;
+                    // Find the sensor in mappedWS, or use a placeholder
+                    const sensor = mappedWS[label] || {
+                      id: label,
+                      name: `BSide Sensor ${wsNum - 12}`,
+                      value: "N/A",
+                      difference: "N/A",
+                      isPositive: false,
+                      waveguide: "WG2",
+                      timestamp: "",
+                      isValid: false,
+                    };
+                    return (
+                      <div key={sensor.id}>
+                        <SensorCard sensor={sensor} />
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* <div className="inline-flex px-1 space-x-2 w-full min-w-max">
-                    {Array(Math.ceil(wg2Sensors.length / 2))
-                      .fill()
-                      .map((_, rowIndex) => (
-                        <div key={`wg2-${rowIndex}`} className="flex flex-col">
-                          {wg2Sensors
-                            .slice(rowIndex * 2, rowIndex * 2 + 2)
-                            .map((sensor) => (
-                              <div key={sensor.id} className="2xl:h-24 2xl:w-36">
-                                <SensorCard sensor={sensor} />
-                              </div>
-                            ))}
-                        </div>
-                      ))}
-                  </div> */}
+
               </div>
 
-              {/* <button
-                    onClick={scrollRight}
-                    className="flex absolute right-0 top-1/2 z-10 justify-center items-center w-10 h-10 rounded-full shadow-md backdrop-blur-sm transition-all duration-300 ease-in-out transform -translate-y-1/2 bg-white/50 hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    style={{ marginRight: '8px' }}
-                    aria-label="Scroll Right"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-gray-700">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                    </svg>
-                  </button> */}
-              {/* </div> */}
+
             </div>
           </div>
         </div>
-        {/* <div className="flex overflow-hidden order-1 justify-center items-center rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm xl:order-2 bg-white/30"> */}
-        {/* <div className="flex order-1 justify-center items-center rounded-2xl xl:order-2 overflow-hidde">
 
-            <Suspense fallback={<div className="flex justify-center items-center w-full h-full">Loading 3D model...</div>}>
-              <ModelViewer modelPath="/side_shell.glb" />
-            </Suspense>
-          </div> */}
         <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch rounded-2xl border border-gray-100 shadow-md backdrop-blur-sm bg-white/30 xl:order-3 xl:flex-row 2xl:p-4">
           <div className="overflow-hidden w-full bg-white rounded-2xl border border-gray-200 shadow-sm">
             <div className="overflow-x-auto overflow-y-auto h-96 scrollbar-custom md:h-full">
@@ -1206,11 +1178,10 @@ const Dashboard = () => {
                       key={value}
                       type="button"
                       onClick={() => handleSideChange(value)}
-                      className={`relative flex h-[100%] items-center justify-center rounded-md px-2 py-1 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                        selectedSide === value
-                          ? "bg-white text-blue-600 shadow-sm"
-                          : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
-                      }`}
+                      className={`relative flex h-[100%] items-center justify-center rounded-md px-2 py-1 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${selectedSide === value
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                        }`}
                       aria-pressed={selectedSide === value}
                     >
                       <span className="relative z-10 flex items-center text-[10px]">
@@ -1329,11 +1300,10 @@ const Dashboard = () => {
                                   </div>
                                   <div className="flex justify-end">
                                     <span
-                                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${
-                                        sensor.isPositive
-                                          ? "bg-green-100 text-green-800"
-                                          : "bg-red-100 text-red-800"
-                                      }`}
+                                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${sensor.isPositive
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-red-100 text-red-800"
+                                        }`}
                                     >
                                       {sensor.isPositive ? "↑" : "↓"}{" "}
                                       {sensor.difference}°C
@@ -1362,27 +1332,25 @@ const Dashboard = () => {
                       key={value}
                       type="button"
                       onClick={() => handleTimeIntervalChange(value)}
-                      className={`relative flex items-center justify-center rounded-md px-3 py-1.5 text-[6px] text-xs transition-all duration-200 xl:text-[8px] 2xl:text-[14px] ${
-                        timeInterval === value
-                          ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
-                          : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
-                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+                      className={`relative flex items-center justify-center rounded-md px-3 py-1.5 text-[6px] text-xs transition-all duration-200 xl:text-[8px] 2xl:text-[14px] ${timeInterval === value
+                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
+                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                        } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
                       aria-pressed={timeInterval === value}
                     >
                       {value === "Live" && (
                         <span
-                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
-                            timeInterval === "Live"
-                              ? "animate-pulse bg-green-500"
-                              : "bg-gray-400"
-                          }`}
+                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${timeInterval === "Live"
+                            ? "animate-pulse bg-green-500"
+                            : "bg-gray-400"
+                            }`}
                           style={
                             timeInterval === "Live"
                               ? {
-                                  animationDuration: "1.5s",
-                                  animationTimingFunction:
-                                    "cubic-bezier(0.4, 0, 0.6, 1)",
-                                }
+                                animationDuration: "1.5s",
+                                animationTimingFunction:
+                                  "cubic-bezier(0.4, 0, 0.6, 1)",
+                              }
                               : {}
                           }
                         ></span>
@@ -1527,17 +1495,15 @@ const Dashboard = () => {
             }}
           >
             {/* Render SensorComparisonCard for ES1-ES12 and WS13-WS24 from API data, preserving API order */}
-            {sensorComparison
-              .filter((item) => item.latest !== null)
-              .map((item) => (
-                <SensorComparisonCard
-                  key={item.sensorId}
-                  sensorId={item.sensorId}
-                  currentAvg={item.latest}
-                  previousAvg={item.average}
-                  unit="°C"
-                />
-              ))}
+            {sensorComparison.map((item) => (
+              <SensorComparisonCard
+                key={item.sensorId}
+                sensorId={item.sensorId}
+                currentAvg={item.latest ?? "N/A"}
+                previousAvg={item.average ?? "N/A"}
+                unit="°C"
+              />
+            ))}
           </div>
 
           <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%]">
@@ -1561,11 +1527,10 @@ const Dashboard = () => {
                     >
                       <div className="hover:text-[#3048C0]">{label}</div>
                       <div
-                        className={`absolute -top-[70%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${
-                          hoveredIndex === i
-                            ? "opacity-100"
-                            : "pointer-events-none opacity-0"
-                        }`}
+                        className={`absolute -top-[70%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${hoveredIndex === i
+                          ? "opacity-100"
+                          : "pointer-events-none opacity-0"
+                          }`}
                       >
                         {sensor?.value ?? "--"} °C
                       </div>
@@ -1576,32 +1541,31 @@ const Dashboard = () => {
 
               {/* west side sensors */}
               {leftValues2.map((data, i) => {
-  const label = `WS${24 - i}`; // reversed: WS24 → WS13
-  const sensor = mappedWS[label]; // from the mapped dictionary
+                const label = `WS${24 - i}`; // reversed: WS24 → WS13
+                const sensor = mappedWS[label]; // from the mapped dictionary
 
-  return (
-    <div
-      key={i}
-      className="xs:text-[8px] absolute top-[68%] flex flex-col gap-2 text-[8px] font-semibold leading-tight 2xl:text-xs 2xl:leading-normal"
-      style={{ left: `${data}%` }}
-    >
-      <div
-        className="relative cursor-pointer py-2 hover:scale-110 hover:text-[#3047C0]"
-        onMouseEnter={() => setHoveredIndex2(i)}
-        onMouseLeave={() => setHoveredIndex2(null)}
-      >
-        <div className="hover:text-[#3048C0]">{label}</div>
-        <div
-          className={`absolute -bottom-[80%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${
-            hoveredIndex2 === i ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-        >
-          {sensor?.value ?? "--"} °C
-        </div>
-      </div>
-    </div>
-  );
-})}
+                return (
+                  <div
+                    key={i}
+                    className="xs:text-[8px] absolute top-[68%] flex flex-col gap-2 text-[8px] font-semibold leading-tight 2xl:text-xs 2xl:leading-normal"
+                    style={{ left: `${data}%` }}
+                  >
+                    <div
+                      className="relative cursor-pointer py-2 hover:scale-110 hover:text-[#3047C0]"
+                      onMouseEnter={() => setHoveredIndex2(i)}
+                      onMouseLeave={() => setHoveredIndex2(null)}
+                    >
+                      <div className="hover:text-[#3048C0]">{label}</div>
+                      <div
+                        className={`absolute -bottom-[80%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${hoveredIndex2 === i ? "opacity-100" : "pointer-events-none opacity-0"
+                          }`}
+                      >
+                        {sensor?.value ?? "--"} °C
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
 
             </div>
           </div>

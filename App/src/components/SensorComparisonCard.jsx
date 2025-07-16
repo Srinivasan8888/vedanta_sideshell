@@ -2,8 +2,14 @@ import React from 'react';
 import { FaArrowUp, FaArrowDown, FaEquals } from 'react-icons/fa';
 
 const SensorComparisonCard = ({ sensorId, currentAvg, previousAvg, unit = '°C' }) => {
-  const difference = currentAvg !== null && previousAvg !== null 
-    ? (currentAvg - previousAvg).toFixed(1)
+  // Check if either value is N/A or null
+  const hasValidValues = currentAvg !== null && 
+                       currentAvg !== 'N/A' && 
+                       previousAvg !== null && 
+                       previousAvg !== 'N/A';
+  
+  const difference = hasValidValues 
+    ? (parseFloat(currentAvg) - parseFloat(previousAvg)).toFixed(1)
     : null;
   
   const getTrendIcon = () => {
@@ -34,11 +40,17 @@ const SensorComparisonCard = ({ sensorId, currentAvg, previousAvg, unit = '°C' 
         <span className="text-[7px] 2xl:text-[12px] text-gray-500">/</span>
         <div className="flex items-center">
           <span className={`text-[7px] 2xl:text-[12px] font-medium 2xl:font-semibold ${
-            difference > 0 ? 'text-red-500' : difference < 0 ? 'text-green-500' : 'text-gray-500'
+            hasValidValues 
+              ? difference > 0 
+                ? 'text-red-500' 
+                : difference < 0 
+                  ? 'text-green-500' 
+                  : 'text-gray-500'
+              : 'text-gray-500'
           }`}>
-           {displayValue(currentAvg)}
+            {displayValue(currentAvg)}
           </span>
-          {getTrendIcon()}
+          {hasValidValues && getTrendIcon()}
         </div>
       </div>
     </div>

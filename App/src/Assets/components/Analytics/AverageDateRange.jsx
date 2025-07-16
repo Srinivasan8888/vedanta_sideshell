@@ -3,6 +3,7 @@ import API from '../Axios/AxiosInterceptor'
 import "./CSS/AnalyticsDateRange.css";
 
 const AverageDateRange = ({ selectedBusBar, setFetchedData }) => {
+
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
   const [average, setAverage] = useState(null);

@@ -238,179 +238,175 @@ class ApiController {
   }
 
   async _getHourlyData(id, startDate, endDate) {
-    // Fetch documents for the given time range
-    const docs = await sensormodel.find({
-      id: id,
-      createdAt: { $gte: startDate, $lt: endDate },
-      waveguide: { $in: ['WG1', 'WG2'] }
-    }).sort({ createdAt: -1 }).lean();
+    try {
+      // Fetch all documents in the time range
+      const docs = await sensormodel.find({
+        id,
+        updatedAt: { $gte: startDate, $lt: endDate },
+        waveguide: { $in: ['WG1', 'WG2'] }
+      }).lean();
 
-    // Initialize hourly buckets
-    const hourlyData = Array.from({ length: 24 }, () => ({
-      WG1: [],
-      WG2: []
-    }));
+      // Initialize hourlyData for 24 hours
+      const hourlyData = Array(24).fill().map(() => ({ WG1: [], WG2: [] }));
 
-    // Process documents into hourly buckets (most recent first)
-    for (const doc of docs) {
-      const hour = new Date(doc.createdAt).getHours();
-      const waveguide = doc.waveguide;
-
-      // Only add if we don't have data for this hour and waveguide yet
-      if (hourlyData[hour][waveguide].length === 0) {
-        // Collect all sensor values
-        const values = [];
+      // Process each document
+      docs.forEach(doc => {
+        const hour = new Date(doc.updatedAt).getHours();
+        const waveguide = doc.waveguide;
+        
+        // Process each sensor from 1 to 38
         for (let i = 1; i <= 38; i++) {
-          const value = parseFloat(doc[`sensor${i}`]);
-          if (!isNaN(value)) values.push(value);
+          const key = `sensor${i}`;
+          const value = doc[key];
+          
+          // Skip "N/A" and non-numeric values
+          if (value === "N/A") continue;
+          
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            if (waveguide === 'WG1') {
+              hourlyData[hour].WG1.push(num);
+            } else if (waveguide === 'WG2') {
+              hourlyData[hour].WG2.push(num);
+            }
+          }
         }
+      });
 
-        if (values.length > 0) {
-          hourlyData[hour][waveguide] = values; // Store the first valid reading we find
-        }
-      }
+      return hourlyData;
+    } catch (error) {
+      console.error(`[ERROR] _getHourlyData: ${error}`);
+      // Return empty hourly data structure on error
+      return Array(24).fill().map(() => ({ WG1: [], WG2: [] }));
     }
-
-    return hourlyData;
   }
 
   // Fetch and process historical data with hourly bucketing
   async _fetchHistoricalData(userId, waveguide, startTime, endTime) {
-    // Fetch documents for the specified time range
-    const docs = await sensormodel.find({
-      id: userId,
-      waveguide: waveguide,
-      createdAt: { $gte: startTime, $lt: endTime }
-    }).sort({ createdAt: 1 }).lean();
+    try {
+      // Fetch all documents in the time range
+      const docs = await sensormodel.find({
+        id: userId,
+        waveguide: waveguide,
+        createdAt: { $gte: startTime, $lt: endTime }
+      }).sort({ createdAt: 1 }).lean();
 
-    // Initialize data structures
-    const hourlyData = new Map();
-    const allSensorValues = [];
+      // Initialize data structures
+      const hourlyData = new Map();
+      const allSensorValues = [];
 
-    // Process each document into hourly buckets
-    docs.forEach(doc => {
-      const timestamp = new Date(doc.createdAt);
-      const hour = timestamp.getHours();
-      const dateKey = timestamp.toISOString().split('T')[0];
-      const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
+      // Process each document
+      docs.forEach(doc => {
+        const timestamp = new Date(doc.createdAt);
+        const hour = timestamp.getHours();
+        const dateKey = timestamp.toISOString().split('T')[0];
+        const hourKey = `${dateKey}-${hour.toString().padStart(2, '0')}`;
 
-      if (!hourlyData.has(hourKey)) {
-        hourlyData.set(hourKey, {
-          timestamp: new Date(timestamp).setMinutes(0, 0, 0),
-          dataPoints: []  // Store all data points for this hour
-        });
-      }
-
-      // Store the complete document for this hour
-      const hourData = hourlyData.get(hourKey);
-
-      // Process all sensors for this document
-      const sensorReadings = {};
-      for (let i = 1; i <= 38; i++) {
-        const sensorKey = `sensor${i}`;
-        const value = parseFloat(doc[sensorKey]);
-        if (!isNaN(value)) {
-          sensorReadings[sensorKey] = value;
-          allSensorValues.push({
-            sensor: sensorKey,
-            value: value,
-            side: waveguide === 'WG1' ? 'ASide' : 'BSide',
-            timestamp: doc.createdAt
+        // Initialize hourly bucket if it doesn't exist
+        if (!hourlyData.has(hourKey)) {
+          hourlyData.set(hourKey, {
+            timestamp: new Date(timestamp).setMinutes(0, 0, 0),
+            dataPoints: []
           });
         }
-      }
 
-      // Only add if we have valid sensor readings
-      if (Object.keys(sensorReadings).length > 0) {
-        hourData.dataPoints.push({
-          timestamp: doc.createdAt,
-          sensors: sensorReadings
-        });
-      }
-    });
+        const hourData = hourlyData.get(hourKey);
+        const sensorReadings = {};
 
-    // Process hourly data into response format
-    const sensorData = [];
-
-    // Convert map to array and sort by timestamp
-    const sortedHours = Array.from(hourlyData.entries())
-      .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
-
-    // Process each hour
-    for (const [_, hourData] of sortedHours) {
-      const timestamp = new Date(hourData.timestamp);
-      const hour = timestamp.getHours();
-
-      // Format timestamp for display
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const hour12 = hour % 12 || 12;
-      const timeString = `${hour12}:00 ${period}`;
-
-      // Prepare sensor data for this hour
-      const hourSensorData = {
-        timestamp: timeString,
-        dataPoints: hourData.dataPoints,  // Include all data points
-        stats: {
-          avgTemp: 0,
-          minTemp: Infinity,
-          maxTemp: -Infinity,
-          totalReadings: hourData.dataPoints.length
+        // Process each sensor (1-38)
+        for (let i = 1; i <= 38; i++) {
+          const sensorKey = `sensor${i}`;
+          const value = doc[sensorKey];
+          
+          // Skip "N/A" values
+          if (value === "N/A") continue;
+          
+          const num = parseFloat(value);
+          if (!isNaN(num)) {
+            sensorReadings[sensorKey] = num;
+            allSensorValues.push({
+              sensor: sensorKey,
+              value: num,
+              side: waveguide === 'WG1' ? 'ASide' : 'BSide',
+              timestamp: doc.createdAt
+            });
+          }
         }
-      };
 
-      // Calculate statistics across all data points
-      const allTemps = [];
-
-      hourData.dataPoints.forEach(dataPoint => {
-        const temps = Object.values(dataPoint.sensors);
-        allTemps.push(...temps);
-
-        // Update min/max
-        const pointMin = Math.min(...temps);
-        const pointMax = Math.max(...temps);
-        hourSensorData.stats.minTemp = Math.min(hourSensorData.stats.minTemp, pointMin);
-        hourSensorData.stats.maxTemp = Math.max(hourSensorData.stats.maxTemp, pointMax);
+        // Only add if we have valid sensor readings
+        if (Object.keys(sensorReadings).length > 0) {
+          hourData.dataPoints.push({
+            timestamp: doc.createdAt,
+            sensors: sensorReadings
+          });
+        }
       });
 
-      // Calculate average temperature for this hour
-      if (allTemps.length > 0) {
-        hourSensorData.stats.avgTemp = parseFloat(
-          (allTemps.reduce((sum, val) => sum + val, 0) / allTemps.length).toFixed(2)
-        );
-      } else {
-        hourSensorData.stats.minTemp = 0;
-        hourSensorData.stats.maxTemp = 0;
-      }
+      // Process hourly data into response format
+      const sensorData = [];
 
-      sensorData.push(hourSensorData);
-    }
+      // Convert map to array and sort by timestamp
+      const sortedHours = Array.from(hourlyData.entries())
+        .sort(([keyA], [keyB]) => new Date(keyA) - new Date(keyB));
 
-    // Calculate statistics
-    const sideValues = allSensorValues.reduce((acc, { sensor, value, side }) => {
-      if (!acc[side]) {
-        acc[side] = [];
-      }
-      acc[side].push(value);
-      return acc;
-    }, {});
+      // Process each hour
+      for (const [_, hourData] of sortedHours) {
+        const timestamp = new Date(hourData.timestamp);
+        const hour = timestamp.getHours();
 
-    const stats = {};
+        // Format timestamp for display
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        const timeString = `${hour12}:00 ${period}`;
 
-    // Calculate stats for each side
-    for (const [side, values] of Object.entries(sideValues)) {
-      if (values.length > 0) {
-        stats[side] = {
-          maxTemp: Math.max(...values).toFixed(1),
-          minTemp: Math.min(...values).toFixed(1),
-          avgTemp: (values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1)
+        // Calculate statistics for this hour
+        const allTemps = [];
+        hourData.dataPoints.forEach(dp => {
+          allTemps.push(...Object.values(dp.sensors));
+        });
+
+        const stats = {
+          avgTemp: 0,
+          minTemp: allTemps.length > 0 ? Math.min(...allTemps) : 0,
+          maxTemp: allTemps.length > 0 ? Math.max(...allTemps) : 0,
+          totalReadings: allTemps.length
         };
-      }
-    }
 
-    return {
-      sensorData,
-      stats
-    };
+        if (allTemps.length > 0) {
+          stats.avgTemp = parseFloat((allTemps.reduce((a, b) => a + b, 0) / allTemps.length).toFixed(2));
+        }
+
+        sensorData.push({
+          timestamp: timeString,
+          dataPoints: hourData.dataPoints,
+          stats
+        });
+      }
+
+      // Calculate overall statistics
+      const sideValues = allSensorValues.reduce((acc, { value, side }) => {
+        if (!acc[side]) acc[side] = [];
+        acc[side].push(value);
+        return acc;
+      }, {});
+
+      const stats = {};
+      for (const [side, values] of Object.entries(sideValues)) {
+        if (values.length > 0) {
+          stats[side] = {
+            maxTemp: Math.max(...values).toFixed(1),
+            minTemp: Math.min(...values).toFixed(1),
+            avgTemp: (values.reduce((sum, val) => sum + val, 0) / values.length).toFixed(1)
+          };
+        }
+      }
+
+      return { sensorData, stats };
+    } catch (error) {
+      console.error(`[ERROR] _fetchHistoricalData: ${error}`);
+      // Return empty structure on error
+      return { sensorData: [], stats: {} };
+    }
   }
   v
   // Helper function to calculate average temperature from sensor data
@@ -487,18 +483,18 @@ class ApiController {
           {
             $group: {
               _id: null,
-              sensor1: { $avg: { $toDouble: '$sensor1' } },
-              sensor2: { $avg: { $toDouble: '$sensor2' } },
-              sensor3: { $avg: { $toDouble: '$sensor3' } },
-              sensor4: { $avg: { $toDouble: '$sensor4' } },
-              sensor5: { $avg: { $toDouble: '$sensor5' } },
-              sensor6: { $avg: { $toDouble: '$sensor6' } },
-              sensor7: { $avg: { $toDouble: '$sensor7' } },
-              sensor8: { $avg: { $toDouble: '$sensor8' } },
-              sensor9: { $avg: { $toDouble: '$sensor9' } },
-              sensor10: { $avg: { $toDouble: '$sensor10' } },
-              sensor11: { $avg: { $toDouble: '$sensor11' } },
-              sensor12: { $avg: { $toDouble: '$sensor12' } }
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
             }
           },
           {
@@ -538,18 +534,18 @@ class ApiController {
           {
             $group: {
               _id: null,
-              sensor1: { $avg: { $toDouble: '$sensor1' } },
-              sensor2: { $avg: { $toDouble: '$sensor2' } },
-              sensor3: { $avg: { $toDouble: '$sensor3' } },
-              sensor4: { $avg: { $toDouble: '$sensor4' } },
-              sensor5: { $avg: { $toDouble: '$sensor5' } },
-              sensor6: { $avg: { $toDouble: '$sensor6' } },
-              sensor7: { $avg: { $toDouble: '$sensor7' } },
-              sensor8: { $avg: { $toDouble: '$sensor8' } },
-              sensor9: { $avg: { $toDouble: '$sensor9' } },
-              sensor10: { $avg: { $toDouble: '$sensor10' } },
-              sensor11: { $avg: { $toDouble: '$sensor11' } },
-              sensor12: { $avg: { $toDouble: '$sensor12' } }
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
             }
           },
           {
@@ -2592,8 +2588,6 @@ class ApiController {
     }
   }
 
-  
-
   async getSensorData(req, res) {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
@@ -2771,7 +2765,6 @@ class ApiController {
     }
   }
 
-
   async getSensorComparison(req, res) {
     try {
       const id = req.headers['x-user-id'] || req.headers['X-User-ID'];
@@ -2827,18 +2820,18 @@ class ApiController {
           {
             $group: {
               _id: null,
-              sensor1: { $avg: { $toDouble: '$sensor1' } },
-              sensor2: { $avg: { $toDouble: '$sensor2' } },
-              sensor3: { $avg: { $toDouble: '$sensor3' } },
-              sensor4: { $avg: { $toDouble: '$sensor4' } },
-              sensor5: { $avg: { $toDouble: '$sensor5' } },
-              sensor6: { $avg: { $toDouble: '$sensor6' } },
-              sensor7: { $avg: { $toDouble: '$sensor7' } },
-              sensor8: { $avg: { $toDouble: '$sensor8' } },
-              sensor9: { $avg: { $toDouble: '$sensor9' } },
-              sensor10: { $avg: { $toDouble: '$sensor10' } },
-              sensor11: { $avg: { $toDouble: '$sensor11' } },
-              sensor12: { $avg: { $toDouble: '$sensor12' } }
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
             }
           },
           {
@@ -2878,18 +2871,18 @@ class ApiController {
           {
             $group: {
               _id: null,
-              sensor1: { $avg: { $toDouble: '$sensor1' } },
-              sensor2: { $avg: { $toDouble: '$sensor2' } },
-              sensor3: { $avg: { $toDouble: '$sensor3' } },
-              sensor4: { $avg: { $toDouble: '$sensor4' } },
-              sensor5: { $avg: { $toDouble: '$sensor5' } },
-              sensor6: { $avg: { $toDouble: '$sensor6' } },
-              sensor7: { $avg: { $toDouble: '$sensor7' } },
-              sensor8: { $avg: { $toDouble: '$sensor8' } },
-              sensor9: { $avg: { $toDouble: '$sensor9' } },
-              sensor10: { $avg: { $toDouble: '$sensor10' } },
-              sensor11: { $avg: { $toDouble: '$sensor11' } },
-              sensor12: { $avg: { $toDouble: '$sensor12' } }
+              sensor1: { $avg: { $convert: { input: "$sensor1", to: "double", onError: null, onNull: null } } },
+              sensor2: { $avg: { $convert: { input: "$sensor2", to: "double", onError: null, onNull: null } } },
+              sensor3: { $avg: { $convert: { input: "$sensor3", to: "double", onError: null, onNull: null } } },
+              sensor4: { $avg: { $convert: { input: "$sensor4", to: "double", onError: null, onNull: null } } },
+              sensor5: { $avg: { $convert: { input: "$sensor5", to: "double", onError: null, onNull: null } } },
+              sensor6: { $avg: { $convert: { input: "$sensor6", to: "double", onError: null, onNull: null } } },
+              sensor7: { $avg: { $convert: { input: "$sensor7", to: "double", onError: null, onNull: null } } },
+              sensor8: { $avg: { $convert: { input: "$sensor8", to: "double", onError: null, onNull: null } } },
+              sensor9: { $avg: { $convert: { input: "$sensor9", to: "double", onError: null, onNull: null } } },
+              sensor10: { $avg: { $convert: { input: "$sensor10", to: "double", onError: null, onNull: null } } },
+              sensor11: { $avg: { $convert: { input: "$sensor11", to: "double", onError: null, onNull: null } } },
+              sensor12: { $avg: { $convert: { input: "$sensor12", to: "double", onError: null, onNull: null } } }
             }
           },
           {

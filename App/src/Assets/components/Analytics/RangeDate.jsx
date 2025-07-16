@@ -3,6 +3,7 @@ import API from "../Axios/AxiosInterceptor";
 import "./CSS/AnalyticsDateRange.css";
 
 const RangeDate = ({ selectedBusBar, setFetchedData }) => {
+    console.log("selectedBusBar", selectedBusBar);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
@@ -23,20 +24,19 @@ const RangeDate = ({ selectedBusBar, setFetchedData }) => {
   };
 
   const fetchdatagraph = () => {
-    console.log("Fetching data..."); // Debug log
+    console.log("Fetching data...");
     if (!startDate || !endDate) {
       alert("Please select both start and end dates.");
     } else {
-      console.log("Start Date:", startDate, "End Date:", endDate); // Debug log
-      const busBarVariable = `sensormodel${selectedBusBar}`;
+      console.log("Start Date:", startDate, "End Date:", endDate); 
       const apidate = async () => {
         try {
           const response = await API.get(
-            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportDateData?sensorrange=all-data&sides=${busBarVariable}&startDate=${startDate}&endDate=${endDate}`
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportDateData?sensorrange=all-data&sides=${selectedBusBar}&startDate=${startDate}&endDate=${endDate}`
           );
           const data = response.data;
           setFetchedData(data);
-          console.log(data); // Debug log
+          console.log(data); 
         } catch (error) {
           console.error("Error fetching data:", error);
         }
