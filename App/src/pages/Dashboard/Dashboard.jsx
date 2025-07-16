@@ -429,18 +429,14 @@ const Dashboard = () => {
         throw new Error("Invalid response format from server");
       }
 
-      // Get lastUpdated from metadata if available
-      const lastUpdated = response.data.data.metadata?.lastUpdated;
+      const { realtime, hourlyAverages, historical, metadata } = response.data.data;
+      
+      // Use lastUpdated from metadata as the single source of truth
+      const lastUpdated = metadata?.lastUpdated;
       console.log("API lastUpdated:", lastUpdated);
       if (lastUpdated) {
         setLastUpdatedAt(lastUpdated);
         console.log("Set lastUpdatedAt state:", lastUpdated);
-      }
-
-      const { realtime, hourlyAverages, historical } = response.data.data;
-
-      if (realtime && realtime.length > 0 && realtime[0].TIME) {
-        setLastUpdatedAt(realtime[0].TIME);
       }
 
       console.log("Received realtime data:", realtime); // my changes to check
