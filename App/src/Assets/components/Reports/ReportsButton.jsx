@@ -6,60 +6,44 @@ import Interval from "../../images/Interval.png";
 
 const ReportsButton = ({ selectedButton, setSelectedButton }) => {
   return (
-    <div className="m-4 my-8 gap-4 rounded-xl border border-white bg-[rgba(16,16,16,0.6)] p-4 backdrop-blur-sm  md:p-4 xl:w-[20%] xl:gap-0">
-      {" "}
-     <div className="h-[270px] md:h-full lg:grid-row grid  gap-4  grid-cols-2 xl:grid-cols-none  items-center justify-center pb-2">
+    <div className="rounded-lg border border-white grid grid-cols-1 grid-rows-4 gap-5  bg-gradient-to-br from-white/20 via-white/5 to-white/20 m-2 w-[95%] md:w-[27%] xl:w-[16%]  backdrop-blur-[5px] p-5">
+    
+   <button className={` border border-white rounded-xl flex items-center justify-center ${selectedButton === "Average" ? "ring-2 ring-white" : ""
+      }`} onClick={() => setSelectedButton("Average")}>
+      <div className="flex items-center flex-col gap-2"><img src={Dateimg} className="w-6 h-6 md:mt-0 md:h-auto md:w-3 2xl:w-5" />
+        <div className="justify-start text-white text-[10px] 2xl:text-[14px] font-medium font-['Poppins']">AVERAGE DATA</div>
+      </div>
+    </button>
 
-     <button
-        className={`flex h-[100%] flex-col items-center justify-center rounded-xl border bg-[rgb(16,16,16)] focus:ring-2 md:h-36  focus:ring-white xl:h-40 xl:w-60 ${
-          selectedButton === "Range"? "ring-2 ring-white focus:ring-white" : "focus:ring-white"
+    <button className={`row-start-2 border border-white rounded-xl flex items-center justify-center ${selectedButton === "Time" ? "ring-2 ring-white" : ""
+      }`}
+      onClick={() => setSelectedButton("Time")}
+    >
+      <div className="flex items-center flex-col gap-2">
+        <img src={Interval} className="w-6 h-6 md:mt-0 md:h-auto md:w-3 2xl:w-5" />
+        <div className="justify-start text-white text-[10px] 2xl:text-[14px] font-medium font-['Poppins']">INTERVAL DATA</div>
+      </div>
+    </button>
+   
+    <button
+      className={`border row-start-3 border-white rounded-xl flex items-center justify-center ${selectedButton === "Range" ? "ring-2 ring-white" : ""
         }`}
-        onClick={() => setSelectedButton("Range")}
-      >
-        <img src={Dateimg} className="w-6 h-6 md:mt-0 md:h-auto" />
-        <div className="mt-4 text-sm text-white font-regular md:text-lg md:font-medium">
-          Date Picker
-        </div>
-      </button>
+      onClick={() => setSelectedButton("Range")}
+    >
+      <div className="flex items-center flex-col gap-2">
+        <img src={Dateimg} className="w-6 h-6 md:mt-0 md:h-auto md:w-3 2xl:w-5" />
+        <div className="justify-start text-white text-[10px] 2xl:text-[14px] font-medium font-['Poppins']">RANGE DATA</div>
+      </div>
+    </button>
 
-      <button
-        className={`flex h-[100%] flex-col justify-center rounded-xl border bg-[rgb(16,16,16)] focus:ring-2 md:h-36  focus:ring-white xl:h-40 xl:w-60 items-center ${
-          selectedButton === "Time"? "ring-2 ring-white focus:ring-white" : "focus:ring-white"
-        }`}
-        onClick={() => setSelectedButton("Time")}
-      >
-        <img src={Interval} className="w-6 h-6 md:mt-0 md:h-auto md:w-8" />
-        <div className="mt-4 text-sm text-white font-regular md:text-lg md:font-medium">
-          Interval Data
-        </div>
-      </button>
-      
-     <button
-        className={`flex h-[100%] flex-col justify-center rounded-xl border bg-[rgb(16,16,16)] focus:ring-2 md:h-36  focus:ring-white xl:h-40 xl:w-60 items-center ${
-          selectedButton === "Average" ? "ring-2 ring-white focus:ring-white" : "focus:ring-white"
-        }`}
-        onClick={() => setSelectedButton("Average")}
-      >
-        <img src={Average} className="w-6 h-6 md:mt-0 md:h-auto md:w-5" />
-        <div className="mt-4 text-sm text-white font-regular md:text-lg md:font-medium">
-          Average Data
-        </div>
-      </button>
-      
-     
-      <button
-        className={`flex h-[100%] flex-col items-center justify-center rounded-xl border bg-[rgb(16,16,16)] focus:ring-2 md:h-36  focus:ring-white xl:h-40 xl:w-60 ${
-          selectedButton === "Count" ? "ring-2 ring-white focus:ring-white" : "focus:ring-white"
-        }`}
-        onClick={() => setSelectedButton("Count")}
-      >
-        <img src={Count} className="w-6 h-6 md:mt-0 md:h-auto" />
-        <div className="mt-4 text-sm text-white font-regular md:text-lg md:font-medium">
-          Count-wise Data
-        </div>
-      </button>
-     </div>
-    </div>
+    <button className={`row-start-4 border border-white rounded-xl flex items-center justify-center ${selectedButton === "Count" ? "ring-2 ring-white" : ""
+      }`} onClick={() => setSelectedButton("Count")}>
+      <div className="flex items-center flex-col gap-2">
+        <img src={Count} className="w-6 h-6 md:mt-0 md:h-auto md:w-3 2xl:w-5" />
+        <div className="justify-start text-white text-[10px] 2xl:text-[14px] font-medium font-['Poppins']">COUNT-WISE DATA</div>
+      </div>
+    </button>
+  </div>
   );
 };
 

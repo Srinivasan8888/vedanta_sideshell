@@ -90,7 +90,7 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
       </button>
 
       <div
-        className={`absolute bottom-1 right-1 flex items-center rounded-full bg-white p-1 text-[8px] leading-tight 2xl:text-base ${sensor.isPositive ? "text-green-500" : "text-red-500"}`}
+        className={`absolute bottom-1 right-1 flex items-center rounded-full bg-white p-1 text-[10px] md:text-[8px] leading-tight 2xl:text-base ${sensor.isPositive ? "text-green-500" : "text-red-500"}`}
       >
         {sensor.isPositive ? (
           <FaArrowUp className="mb-1 mr-0.5 mt-0.5 text-[8px] 2xl:text-base" />
@@ -101,17 +101,17 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
       </div>
 
       <div className="flex flex-col gap-0 2xl:gap-4">
-        <h3 className="flex truncate text-[8px] leading-tight 2xl:text-lg text-[#3047c0]  2xl:font-semibold">
+        <h3 className="flex truncate text-[14px] md:text-[8px] leading-tight 2xl:text-lg text-[#3047c0]  2xl:font-semibold">
 
 
           {sensor.value}
-          <span className="text-[10px] text-[#3047c0]  2xl:text-base 2xl:font-bold">
+          <span className="text-[14px] md:text-[10px] text-[#3047c0]  2xl:text-base 2xl:font-bold">
             °C
           </span>
         </h3>
 
         <div className="flex items-baseline xl:absolute xl:bottom-1">
-          <span className="text-[10px]  text-[#1e2c74]  2xl:text-base 2xl:font-semibold">
+          <span className="text-[14px] md:text-[10px]  text-[#1e2c74]  2xl:text-base 2xl:font-semibold">
             {sensor.name.includes("A")
               ? `ES${sensor.name.replace(/[^0-9]/g, "")}`
               : `WS${Number(sensor.name.replace(/[^0-9]/g, "")) + 12}`}
@@ -430,7 +430,7 @@ const Dashboard = () => {
       }
 
       const { realtime, hourlyAverages, historical, metadata } = response.data.data;
-      
+
       // Use lastUpdated from metadata as the single source of truth
       const lastUpdated = metadata?.lastUpdated;
       console.log("API lastUpdated:", lastUpdated);
@@ -685,10 +685,10 @@ const Dashboard = () => {
 
   return (
     <div className="w-full h-full">
-      <div className="flex flex-col gap-4 p-1 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
+      <div className="flex flex-col gap-4 p-1 md:p-4 xl:p-0 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
         <div className="overflow-hidden order-2 rounded-lg xl:order-1">
           <div className="grid gap-2 h-full grid-col">
-            <div className="overflow-hidden p-2 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-sm bg-white/30 2xl:p-4">
+            <div className="overflow-hidden p-2 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-[5px] outline outline-2 outline-offset-[-1px] outline-white bg-gradient-to-br from-white/25 via-white/5 to-white/25 2xl:p-4">
 
 
               <div
@@ -700,7 +700,7 @@ const Dashboard = () => {
               >
 
                 {/* For ES1–ES12 */}
-                <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-1 h-1/2 2xl:gap-2">
                   {Array.from({ length: 12 }, (_, i) => {
                     const label = `ES${i + 1}`;
                     // Find the sensor in mappedES, or use a placeholder
@@ -723,7 +723,7 @@ const Dashboard = () => {
                 </div>
 
                 {/* For WS13–WS24 */}
-                <div className="grid grid-cols-6 gap-1 h-1/2 2xl:gap-2">
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-1 h-1/2 2xl:gap-2">
                   {Array.from({ length: 12 }, (_, i) => {
                     const wsNum = 13 + i;
                     const label = `WS${wsNum}`;
@@ -754,207 +754,202 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch rounded-2xl border border-gray-100 shadow-md backdrop-blur-sm bg-white/30 xl:order-3 xl:flex-row 2xl:p-4">
-          <div className="overflow-hidden w-full bg-white rounded-2xl border border-gray-200 shadow-sm">
+        <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch rounded-2xl  shadow-md md:flex-row xl:order-3 xl:flex-row ">
+          <div className="overflow-hidden w-full bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-2xl border border-gray-200 shadow-sm h-[250px] xl:h-[100%] text-white">
             <div className="overflow-x-auto overflow-y-auto h-96 scrollbar-custom md:h-full">
+              <div className="text-center text-[10px] md:text-[12px] xl:text-[14px] font-normal">Each side's average reading- 24 Hrs</div>
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+                <thead className="">
                   <tr className="text-left">
                     <th
                       rowSpan="2"
-                      className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium"
+                      className="text-[10px] uppercase tracking-wider text-white 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium"
                     >
                       #
                     </th>
                     <th
                       rowSpan="2"
-                      className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium"
+                      className="text-[10px] uppercase tracking-wider text-white 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium"
                     >
                       Time
                     </th>
-                    <th
-                      colSpan="3"
-                      className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium"
-                    >
-                      Temperature Data
-                    </th>
+
                   </tr>
                   <tr className="text-left">
-                    <th className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
+                    <th className="text-[10px] uppercase tracking-wider text-white 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
                       Side
                     </th>
-                    <th className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
+                    <th className="text-[10px] uppercase tracking-wider text-white 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
                       Temp (°C)
                     </th>
-                    <th className="text-[10px] uppercase tracking-wider text-gray-600 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
+                    <th className="text-[10px] uppercase tracking-wider text-white 2xl:px-4 2xl:py-3 2xl:text-xs 2xl:font-medium">
                       Status
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {hourlyAverages
-                    ?.filter((hourData) => hourData?.entries?.length > 0)
-                    .map((hourData, index) => {
-                      const getStatusClass = (temp) => {
-                        if (temp > 400) return "bg-red-400/20 text-red-700";
-                        if (temp < 25) return "bg-blue-400/20 text-blue-700";
-                        return "bg-green-400/20 text-green-700";
-                      };
+                  {Array.from({ length: 24 }, (_, i) => {
+                    const hourNum = i + 1;
+                    const hourData = hourlyAverages?.find(h => h.index === hourNum) || {
+                      index: hourNum,
+                      time: `${hourNum === 12 ? '12' : hourNum % 12} ${hourNum < 12 || hourNum === 24 ? 'AM' : 'PM'}`,
+                      entries: []
+                    };
+                    return hourData;
+                  }).map((hourData, index) => {
+                    const getStatusClass = (temp) => {
+                      if (temp > 400) return "bg-red-200/20 text-red-400";
+                      if (temp < 25) return "bg-blue-200/20 text-blue-400";
+                      return "bg-green-200/20 text-green-400";
+                    };
 
-                      const getStatusText = (temp) => {
-                        if (temp > 400) return "High";
-                        if (temp < 25) return "Low";
-                        return "Normal";
-                      };
+                    const getStatusText = (temp) => {
+                      if (temp > 400) return "High";
+                      if (temp < 25) return "Low";
+                      return "Normal";
+                    };
 
-                      const getSideData = (side) => {
-                        const entry = hourData.entries.find(
-                          (e) => e.side === side,
-                        );
-                        if (!entry)
-                          return {
-                            temp: "--",
-                            status: {
-                              class: "bg-gray-100/30 text-gray-600 ",
-                              text: "--",
-                            },
-                          };
-
+                    const getSideData = (side) => {
+                      const entry = hourData.entries.find(
+                        (e) => e.side === side,
+                      );
+                      if (!entry)
                         return {
-                          temp:
-                            typeof entry.temp === "number"
-                              ? entry.temp.toFixed(1)
-                              : "--",
+                          temp: "--",
                           status: {
-                            class: getStatusClass(entry.temp),
-                            text: getStatusText(entry.temp),
+                            class: "bg-gray-100/30 text-gray-600 ",
+                            text: "--",
                           },
                         };
+
+                      return {
+                        temp:
+                          typeof entry.temp === "number"
+                            ? entry.temp.toFixed(1)
+                            : "--",
+                        status: {
+                          class: getStatusClass(entry.temp),
+                          text: getStatusText(entry.temp),
+                        },
                       };
+                    };
 
-                      const aSide = getSideData("ASide");
-                      const bSide = getSideData("BSide");
+                    const aSide = getSideData("ASide");
+                    const bSide = getSideData("BSide");
 
-                      return (
-                        <React.Fragment key={`${hourData.index}-${index}`}>
-                          <tr className="transition-colors duration-150 group hover:bg-white/20">
-                            <td
-                              rowSpan="2"
-                              className="border-r border-gray-100 text-[10px] text-gray-800 2xl:px-4 2xl:py-3 2xl:text-sm 2xl:font-medium"
+                    return (
+                      <React.Fragment key={`hour-${hourData.index}`}>
+                        <tr className="transition-colors duration-150 group hover:bg-white/20">
+                          <td
+                            rowSpan="2"
+                            className="border-r border-gray-100 text-[10px] text-white 2xl:px-4 2xl:py-3 2xl:text-sm 2xl:font-medium"
+                          >
+                            <span className="inline-flex justify-center items-center w-6 h-6 text-white rounded-full bg-white/20">
+                              {index + 1}
+                            </span>
+                          </td>
+                          <td
+                            rowSpan="2"
+                            className="border-r border-gray-100 text-[10px] text-white 2xl:px-4 2xl:py-3 2xl:text-sm 2xl:font-medium"
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-white font-regular 2xl:font-semibold">
+                                {hourData.time?.split(" ")[0] || "--"}
+                              </span>
+                              <span className="text-[10px] text-gray-400 2xl:text-xs">
+                                {hourData.time?.split(" ")[1] || ""}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="text-[10px] text-white 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
+                            <span className="inline-flex items-center">
+                              <span className="mr-2 w-2 h-2 bg-blue-500 rounded-full"></span>
+                              East Side
+                            </span>
+                          </td>
+                          <td className="text-[10px] text-white 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
+                            {aSide.temp === '--' ? '--' : `${aSide.temp}°C`}
+                          </td>
+                          <td className="2xl:px-4 2xl:py-2">
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium 2xl:text-sm ${aSide.status.class} backdrop-blur-[5px]`}
                             >
-                              <span className="inline-flex justify-center items-center w-6 h-6 text-gray-700 rounded-full bg-white/20">
-                                {index + 1}
-                              </span>
-                            </td>
-                            <td
-                              rowSpan="2"
-                              className="border-r border-gray-100 text-[10px] text-gray-800 2xl:px-4 2xl:py-3 2xl:text-sm 2xl:font-medium"
+                              {aSide.status.text}
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 transition-colors duration-150 group hover:bg-gray-50">
+                          <td className="text-[10px] text-white 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
+                            <span className="inline-flex items-center whitespace-nowrap">
+                              <span className="mr-2 w-2 h-2 bg-amber-500 rounded-full"></span>
+                              West Side
+                            </span>
+                          </td>
+                          <td className="text-[10px] text-white 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
+                            {bSide.temp === '--' ? '--' : `${bSide.temp}°C`}
+                          </td>
+                          <td className="2xl:px-4 2xl:py-2">
+                            <span
+                              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium 2xl:text-sm ${aSide.status.class} backdrop-blur-[5px] `}
                             >
-                              <div className="flex flex-col">
-                                <span className="text-gray-900 font-regular 2xl:font-semibold">
-                                  {hourData.time?.split(" ")[0] || "--"}
-                                </span>
-                                <span className="text-[10px] text-gray-500 2xl:text-xs">
-                                  {hourData.time?.split(" ")[1] || ""}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="text-[10px] text-gray-700 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
-                              <span className="inline-flex items-center">
-                                <span className="mr-2 w-2 h-2 bg-blue-500 rounded-full"></span>
-                                East Side
-                              </span>
-                            </td>
-                            <td className="text-[10px] text-gray-700 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
-                              {aSide.temp}°C
-                            </td>
-                            <td className="2xl:px-4 2xl:py-2">
-                              <span
-                                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium 2xl:text-sm ${aSide.status.class} backdrop-blur-sm`}
-                              >
-                                {aSide.status.text}
-                              </span>
-                            </td>
-                          </tr>
-                          <tr className="border-b border-gray-100 transition-colors duration-150 group hover:bg-gray-50">
-                            <td className="text-[10px] text-gray-700 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
-                              <span className="inline-flex items-center whitespace-nowrap">
-                                <span className="mr-2 w-2 h-2 bg-amber-500 rounded-full"></span>
-                                West Side
-                              </span>
-                            </td>
-                            <td className="text-[10px] text-gray-700 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
-                              {bSide.temp}°C
-                            </td>
-                            <td className="2xl:px-4 2xl:py-2">
-                              <span
-                                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium 2xl:text-sm ${aSide.status.class} backdrop-blur-sm`}
-                              >
-                                {aSide.status.text}
-                              </span>
-                            </td>
-                          </tr>
-                        </React.Fragment>
-                      );
-                    })}
+                              {aSide.status.text}
+                            </span>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
 
-          <div className="flex flex-col w-full h-full bg-white rounded-xl border border-gray-100 shadow-sm">
-            <div className="flex h-[15%] flex-col justify-between border-b border-gray-100 sm:flex-row sm:items-center 2xl:h-[20%] 2xl:gap-2">
-              <div className="flex items-center 2xl:space-x-3">
-                <h5 className="text-[10px] font-normal leading-tight text-gray-800 2xl:text-base 2xl:font-semibold">
-                  Temperature Statistics
-                </h5>
-              </div>
-              <div className="flex items-center">
-                {lastUpdatedAt && (
-                  <div className="hidden items-center text-[10px] font-normal leading-tight text-gray-500 sm:flex 2xl:text-sm">
-                    <span>
-                      Last updated:{" "}
-                      <span className="font-normal text-gray-700 2xl:font-medium">
-                        {" "}
-                        {new Date(lastUpdatedAt).toLocaleString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                          hour12: true,
-                          timeZone: "Asia/Kolkata",
-                        })}
-                      </span>
-                    </span>
-                  </div>
-                )}
+          <div className="flex flex-col  w-full h-[50%] md:h-[100%] bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-xl border border-gray-100 ">
+            <div className="flex h-[15%] flex-row justify-between border-b border-gray-100  sm:items-center 2xl:h-[20%] 2xl:gap-2 px-2">
 
-                <div
-                  className={`flex items-center space-x-1.5 rounded-full px-3 py-1.5 text-xs font-normal transition-colors duration-200 2xl:text-sm 2xl:font-medium ${liveStatus.isLive ? "border border-green-100 bg-green-50 text-green-700" : "border border-gray-100 bg-gray-50 text-gray-600"}`}
-                >
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${liveStatus.isLive ? "animate-pulse bg-green-500" : "animate-pulse bg-red-500"}`}
-                  ></span>
-                  <span className="font-normal 2xl:font-medium">
-                    {liveStatus.isLive ? "Live" : "Inactive"}
-                  </span>
-                  {liveStatus.isLive && (
-                    <span className="ml-1.5 flex h-1 w-1 2xl:h-2 2xl:w-2">
-                      <span className="inline-flex absolute w-1 h-1 bg-green-400 rounded-full opacity-75 animate-ping 2xl:h-2 2xl:w-2"></span>
-                      <span className="inline-flex relative w-1 h-1 bg-green-500 rounded-full 2xl:h-2 2xl:w-2"></span>
+              <h5 className="text-[10px] font-normal leading-tight text-white 2xl:text-base 2xl:font-medium items-center justify-center flex">
+                Temp Stats
+              </h5>
+
+              {lastUpdatedAt && (
+                <div className="items-center text-[10px] font-normal leading-tight text-white  2xl:text-sm justify-center flex">
+                  <span className="font-normal text-white 2xl:font-medium">
+                    Last updated: {" "}
+                    <span className="font-normal text-white 2xl:font-medium">
+                      {" "}
+                      {new Date(lastUpdatedAt).toLocaleString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                        hour12: true,
+                        timeZone: "Asia/Kolkata",
+                      })}
                     </span>
-                  )}
+                  </span>
                 </div>
+              )}
+
+              <div
+                className={`flex items-center justify-center text-[10px]  space-x-1.5 rounded-full leading-tight  px-3 py-1.5 text-xs font-normal transition-colors duration-200 2xl:text-sm 2xl:font-medium ${liveStatus.isLive ? "border border-green-100 bg-green-50 text-green-700" : "border border-gray-100 bg-gray-50 text-gray-600"}`}
+              >
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${liveStatus.isLive ? "animate-pulse bg-green-500" : "animate-pulse bg-red-500"}`}
+                ></span>
+                <span className="font-normal 2xl:font-medium">
+                  {liveStatus.isLive ? "Live" : "Inactive"}
+                </span>
               </div>
             </div>
 
+            {/* bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] */}
             {/* <div className="flex-1"> */}
-            <div className="grid h-[70%] grid-cols-2 gap-3 whitespace-nowrap border p-3 md:grid-cols-4 xl:grid-cols-2 2xl:h-[60%]">
+            <div className="grid  grid-cols-2 md:grid-cols-2 gap-3 whitespace-nowrap border p-3 xl:grid-cols-2 2xl:h-[60%]">
               {/* Max Temperature Card */}
-              <div className="flex flex-col p-1 bg-gradient-to-br from-red-50 to-white rounded-lg border border-red-100">
+              <div className="flex flex-col p-1 bg-[#ff0000]/20  rounded-lg border border-[#ff0000]">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-normal leading-tight text-red-600 2xl:text-sm">
+                  <span className="text-[10px] font-normal leading-tight text-red-600 2xl:text-sm 2xl:font-medium">
                     Max Temp
                   </span>
                   <div className="hidden p-1 bg-red-100 rounded-lg 2xl:flex">
@@ -975,20 +970,21 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 2xl:gap-2">
+                <div className="grid grid-cols-2 mt-auto 2xl:gap-1 lg:mt-3">
                   <div className="text-center">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+                    <p className="text-xs font-normal text-[#ff0000] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.ASide?.maxTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200  2xl:text-sm 2xl:font-medium leading-tight">
                       East Side
                     </p>
                   </div>
-                  <div className="text-center border-l border-gray-200 2xl:pl-4">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+
+                  <div className="text-center border-l border-gray-200 2xl:pl-3">
+                    <p className="text-xs font-normal text-[#ff0000] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.BSide?.maxTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
                       West Side
                     </p>
                   </div>
@@ -996,9 +992,9 @@ const Dashboard = () => {
               </div>
 
               {/* Min Temperature Card */}
-              <div className="flex flex-col p-1 bg-gradient-to-br from-blue-50 to-white rounded-lg border border-blue-100">
+              <div className="flex flex-col p-1 bg-[#4b7eee]/20 rounded-lg border border-[#4b7eee]">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-normal text-blue-600 2xl:text-sm 2xl:font-medium">
+                  <span className="text-[10px] font-normal leading-tight text-blue-600 2xl:text-sm 2xl:font-medium">
                     Min Temp
                   </span>
                   <div className="hidden p-1 bg-blue-100 rounded-lg 2xl:flex">
@@ -1018,29 +1014,29 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 mt-auto 2xl:gap-4">
+                <div className="grid grid-cols-2 mt-auto 2xl:gap-1 lg:mt-3">
                   <div className="text-center">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+                    <p className="text-xs font-normal text-[#4b7eee] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.ASide?.minTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
                       East Side
                     </p>
                   </div>
-                  <div className="text-center border-l border-gray-200 2xl:pl-4">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+                  <div className="text-center border-l border-gray-200 2xl:pl-3">
+                    <p className="text-xs font-normal text-[#4b7eee] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.BSide?.minTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
                       West Side
                     </p>
                   </div>
                 </div>
               </div>
               {/* Average Temperature Card */}
-              <div className="flex flex-col p-1 bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-100">
-                <div className="flex justify-between items-center 2xl:mb-1">
-                  <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">
+              <div className="flex flex-col p-1 bg-[#00d600]/20 rounded-lg border border-[#00d500]">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-normal leading-tight text-[#00d600] 2xl:text-sm 2xl:font-medium">
                     Avg Temp
                   </span>
                   <div className="hidden p-1 bg-gray-100 rounded-lg 2xl:flex">
@@ -1060,20 +1056,22 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 2xl:gap-4">
+
+                <div className="grid grid-cols-2 mt-auto 2xl:gap-1 lg:mt-3">
                   <div className="text-center">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+                    <p className="text-xs font-normal text-[#00d600] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.ASide?.avgTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
                       East Side
                     </p>
                   </div>
-                  <div className="text-center border-l border-gray-200 2xl:pl-4">
-                    <p className="text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+
+                  <div className="text-center border-l border-gray-200 2xl:pl-3">
+                    <p className="text-xs font-normal text-[#00d600] 2xl:text-xl 2xl:font-bold leading-tight">
                       {temperatureStats?.BSide?.avgTemp ?? "--"}
                     </p>
-                    <p className="text-[10px] font-normal text-gray-500 2xl:text-sm 2xl:font-medium">
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
                       West Side
                     </p>
                   </div>
@@ -1081,12 +1079,12 @@ const Dashboard = () => {
               </div>
 
               {/* Sensor Alerts Card */}
-              <div className="flex flex-col p-1 bg-gradient-to-br from-amber-50 to-white rounded-lg border border-amber-100">
+              {/* <div className="flex flex-col p-1 bg-[#ff8900]/10 rounded-lg border border-[#ff8900]">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-normal text-gray-600 2xl:text-sm 2xl:font-medium">
+                  <span className="text-[10px] font-normal leading-tight text-[#fe8800] 2xl:text-sm 2xl:font-medium">
                     Sensor Alerts
                   </span>
-                  <div className="hidden p-1 bg-amber-100 rounded-lg 2xl:flex">
+                  <div className="hidden p-1 bg-[#fe8800]/10 rounded-lg 2xl:flex">
                     <svg
                       className="w-4 h-4 text-amber-600"
                       fill="none"
@@ -1103,17 +1101,60 @@ const Dashboard = () => {
                     </svg>
                   </div>
                 </div>
-                <p className="mt-2 text-xs font-normal text-gray-800 2xl:text-xl 2xl:font-bold">
+                <p className="md:mt-2 text-[10px] font-normal text-gray-800 2xl:text-xl 2xl:font-bold leading-tight">
                   N/A
                 </p>
-                <p className="mt-auto text-xs font-normal text-amber-600 2xl:text-sm 2xl:font-medium">
+                <p className="md:mt-2 text-[10px] font-normal text-amber-600 2xl:text-sm 2xl:font-medium leading-tight">
                   Requires attention
                 </p>
+              </div> */}
+              <div className="flex flex-col p-1 bg-[#ff8900]/20 rounded-lg border border-[#ff8900]">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-normal leading-tight text-[#ff8900] 2xl:text-sm 2xl:font-medium">
+                  Sensor Alerts
+                  </span>
+                  <div className="hidden p-1 bg-gray-100 rounded-lg 2xl:flex">
+                    <svg
+                      className="w-4 h-4 text-orange-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="grid grid-col mt-auto 2xl:gap-1 lg:mt-3">
+                  <div className="text-center">
+                    <p className="text-xs font-normal text-[#ff8900] 2xl:text-xl 2xl:font-bold leading-tight">
+                    --
+                    </p>
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
+                    Requires attention
+                    </p>
+                  </div>
+
+                  {/* <div className="text-center border-l border-gray-200 2xl:pl-3">
+                    <p className="text-xs font-normal text-[#ff8900] 2xl:text-xl 2xl:font-bold leading-tight">
+                      {temperatureStats?.BSide?.avgTemp ?? "--"}
+                    </p>
+                    <p className="text-[10px] font-normal text-gray-200 2xl:text-sm 2xl:font-medium leading-tight">
+                      West Side       
+                    </p>
+                  </div> */}
+                </div>
               </div>
             </div>
             {/* </div> */}
 
-            <div className="h-[15%] rounded-b-3xl border-t border-gray-100 bg-gray-50 2xl:h-[20%] 2xl:p-3">
+            <div className="h-[15%] border-gray-100  2xl:h-[20%] 2xl:p-3">
               <div className="grid grid-cols-1 gap-2 items-end sm:grid-cols-5 2xl:gap-3">
                 <div className="sm:col-span-2">
                   <div className="relative">
@@ -1158,352 +1199,395 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="order-4 p-2 rounded-2xl border-2 shadow-md backdrop-blur-sm bg-white/30 xl:order-4">
-          <div className="relative w-full md:h-full">
-            <div className="mb-4 flex h-[15%] flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-[100%] items-center gap-2">
-                <h3 className="text-[10px] text-gray-800 xl:text-[10px] 2xl:text-[14px]">
-                  Temperature Trend
-                </h3>
-                <div className="inline-flex h-[90%] rounded-lg bg-gray-50 p-1 shadow-inner">
-                  {[
-                    { value: "ASide", label: "East Side" },
-                    { value: "BSide", label: "West Side" },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleSideChange(value)}
-                      className={`relative flex h-[100%] items-center justify-center rounded-md px-2 py-1 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${selectedSide === value
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
-                        }`}
-                      aria-pressed={selectedSide === value}
-                    >
-                      <span className="relative z-10 flex items-center text-[10px]">
-                        <div className="">{label}</div>
-                      </span>
-                      {selectedSide === value && (
-                        <span className="absolute inset-0 rounded-md ring-1 ring-gray-200 bg-white/80"></span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
+        <div className="order-4 p-2 rounded-2xl border-2 shadow-md backdrop-blur-[5px] bg-gradient-to-br from-white/25 via-white/5 to-white/25 xl:order-4">
+          <div className="mb-4  h-[35%] md:h-[15%] items-center justify-around  gap-3 grid grid-row md:flex md:flex-row sm:items-center">
 
-              <div className="relative">
+
+            <h3 className="text-[10px] text-white xl:text-[10px] 2xl:text-[14px]">
+              Temperature Trend
+            </h3>
+
+            <div className="inline-flex h-[90%] rounded-lg bg-gray-50 p-1 shadow-inner ">
+              {[
+                { value: "ASide", label: "East Side" },
+                { value: "BSide", label: "West Side" },
+              ].map(({ value, label }) => (
                 <button
-                  onClick={() => setShowLegendPopup(!showLegendPopup)}
-                  className="flex gap-1 items-center px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-md border border-blue-100 transition-colors hover:bg-blue-100"
+                  key={value}
+                  type="button"
+                  onClick={() => handleSideChange(value)}
+                  className={`relative flex h-[100%] items-center justify-center rounded-md px-2 py-1 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${selectedSide === value
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                    }`}
+                  aria-pressed={selectedSide === value}
                 >
-                  <span className="text-[6px] xl:text-[8px] 2xl:text-[14px]">
-                    Legend
+                  <span className="relative z-10 flex items-center text-[10px]">
+                    <div className="">{label}</div>
                   </span>
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
+                  {selectedSide === value && (
+                    <span className="absolute inset-0 rounded-md ring-1 ring-gray-200 bg-white/80"></span>
+                  )}
                 </button>
-                {showLegendPopup && (
-                  <div className="absolute bottom-10 left-1 right-0 z-30 w-[28rem] overflow-visible rounded-lg border border-gray-200 bg-white shadow-lg">
-                    <div className="flex justify-between items-center p-3 border-b border-gray-100">
-                      <h4 className="text-sm font-medium text-gray-700">
-                        {selectedSide} Sensors
-                        <span className="ml-1 text-xs font-normal text-gray-500">
-                          (
-                          {
-                            sensors.filter(
-                              (s) =>
-                                s.waveguide ===
-                                (selectedSide === "ASide" ? "WG1" : "WG2"),
-                            ).length
-                          }{" "}
-                          active)
-                        </span>
-                      </h4>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowLegendPopup(false);
-                        }}
-                        className="px-2 py-1 text-xs text-blue-600 rounded transition-colors hover:bg-blue-50 hover:text-blue-800"
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div className="p-3">
-                      <div className="grid grid-cols-3">
-                        {sensors
-                          .filter(
-                            (sensor) =>
-                              sensor.waveguide ===
-                              (selectedSide === "ASide" ? "WG1" : "WG2"),
-                          )
-                          .map((sensor, index) => {
-                            // Get the sensor number from the name (e.g., 'Sensor 1' -> '1')
-                            const sensorNumber = sensor.name.replace(/\D/g, "");
-                            // Create consistent sensor ID that matches the chart's format
-                            const sensorId = `${sensor.waveguide === "WG1" ? "ASide" : "BSide"}${sensorNumber}`;
-                            const isHidden = hiddenSensors[sensorId];
-                            const displayName =
-                              sensor.waveguide === "WG1"
-                                ? `ES${sensorNumber}`
-                                : `WS${Number(sensorNumber) + 12}`;
+              ))}
+            </div>
 
-                            return (
+            <div className="relative">
+              <button
+                onClick={() => setShowLegendPopup(!showLegendPopup)}
+                className="flex gap-1 items-center px-2 py-1 text-xs text-blue-600 bg-blue-50 rounded-md border border-blue-100 transition-colors hover:bg-blue-100"
+              >
+                <span className="text-[6px] ">
+                  Legend
+                </span>
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
+              {showLegendPopup && (
+                <div className="absolute bottom-10 left-1 right-0 z-30 w-[15rem] md:w-[28rem] overflow-visible rounded-lg border border-gray-200 bg-white shadow-lg">
+
+                  <div className="flex justify-between items-center p-3 border-b border-gray-100">
+                    <h4 className="text-[10px]    font-medium text-gray-700">
+                      {selectedSide} Sensors
+                      <span className="ml-1 text-[10px]   font-normal text-gray-500">
+                        (
+                        {
+                          sensors.filter(
+                            (s) =>
+                              s.waveguide ===
+                              (selectedSide === "ASide" ? "WG1" : "WG2"),
+                          ).length
+                        }{" "}
+                        active)
+                      </span>
+                    </h4>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowLegendPopup(false);
+                      }}
+                      className="px-2 py-1 text-[10px]    text-blue-600 rounded transition-colors hover:bg-blue-50 hover:text-blue-800"
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <div className="p-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3">
+                      {sensors
+                        .filter(
+                          (sensor) =>
+                            sensor.waveguide ===
+                            (selectedSide === "ASide" ? "WG1" : "WG2"),
+                        )
+                        .map((sensor, index) => {
+                          // Get the sensor number from the name (e.g., 'Sensor 1' -> '1')
+                          const sensorNumber = sensor.name.replace(/\D/g, "");
+                          // Create consistent sensor ID that matches the chart's format
+                          const sensorId = `${sensor.waveguide === "WG1" ? "ASide" : "BSide"}${sensorNumber}`;
+                          const isHidden = hiddenSensors[sensorId];
+                          const displayName =
+                            sensor.waveguide === "WG1"
+                              ? `ES${sensorNumber}`
+                              : `WS${Number(sensorNumber) + 12}`;
+
+                          return (
+                            <div
+                              key={sensor.id}
+                              className={`flex cursor-pointer items-center rounded p-2 text-[10px] leading-tight hover:bg-gray-50 ${isHidden ? "opacity-40" : ""}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setHiddenSensors((prev) => ({
+                                  ...prev,
+                                  [sensorId]: !prev[sensorId],
+                                }));
+                              }}
+                              title={isHidden ? "Show sensor" : "Hide sensor"}
+                            >
                               <div
-                                key={sensor.id}
-                                className={`flex cursor-pointer items-center rounded p-2 text-xs hover:bg-gray-50 ${isHidden ? "opacity-40" : ""}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setHiddenSensors((prev) => ({
-                                    ...prev,
-                                    [sensorId]: !prev[sensorId],
-                                  }));
+                                className="mr-2 h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                style={{
+                                  backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%`,
+                                  opacity: isHidden ? 0.5 : 0.9,
+                                  transition: "opacity 0.2s",
+                                  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                                 }}
-                                title={isHidden ? "Show sensor" : "Hide sensor"}
-                              >
-                                <div
-                                  className="mr-2 h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                                  style={{
-                                    backgroundColor: `hsl(${(index * 137.5) % 360}, 70%, 50%`,
-                                    opacity: isHidden ? 0.5 : 0.9,
-                                    transition: "opacity 0.2s",
-                                    boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex justify-between items-baseline">
-                                    <span
-                                      className={`truncate font-medium ${isHidden ? "text-gray-500" : "text-gray-900"}`}
-                                    >
-                                      {displayName}
-                                    </span>
-                                    <span
-                                      className={`ml-2 font-medium ${isHidden ? "text-gray-400" : "text-blue-600"}`}
-                                    >
-                                      {sensor.value}°C
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-end">
-                                    <span
-                                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-medium ${sensor.isPositive
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-red-100 text-red-800"
-                                        }`}
-                                    >
-                                      {sensor.isPositive ? "↑" : "↓"}{" "}
-                                      {sensor.difference}°C
-                                    </span>
-                                  </div>
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-baseline">
+                                  <span
+                                    className={`truncate font-medium ${isHidden ? "text-gray-500" : "text-gray-900"}`}
+                                  >
+                                    {displayName}
+                                  </span>
+                                  <span
+                                    className={`ml-2 font-medium ${isHidden ? "text-gray-400" : "text-blue-600"}`}
+                                  >
+                                    {sensor.value}°C
+                                  </span>
+                                </div>
+                                <div className="flex justify-end">
+                                  <span
+                                    className={`inline-flex items-center rounded    px-1.5  py-0.5 text-[10px] font-medium ${sensor.isPositive
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-red-100 text-red-800"
+                                      }`}
+                                  >
+                                    {sensor.isPositive ? "↑" : "↓"}{" "}
+                                    {sensor.difference}°C
+                                  </span>
                                 </div>
                               </div>
-                            );
-                          })}
-                      </div>
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1 justify-end items-center w-full sm:w-auto">
-                <div className="inline-flex items-center rounded-lg bg-gray-50 p-0.5 shadow-inner">
-                  {[
-                    { value: "Live", label: "Live" },
-                    { value: "1h", label: "1h" },
-                    { value: "2h", label: "2h" },
-                    { value: "5h", label: "5h" },
-                    { value: "7h", label: "7h" },
-                    { value: "12h", label: "12h" },
-                  ].map(({ value, label }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleTimeIntervalChange(value)}
-                      className={`relative flex items-center justify-center rounded-md px-3 py-1.5 text-[6px] text-xs transition-all duration-200 xl:text-[8px] 2xl:text-[14px] ${timeInterval === value
-                        ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
-                        : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
-                        } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
-                      aria-pressed={timeInterval === value}
-                    >
-                      {value === "Live" && (
-                        <span
-                          className={`mr-1.5 h-1.5 w-1.5 rounded-full ${timeInterval === "Live"
-                            ? "animate-pulse bg-green-500"
-                            : "bg-gray-400"
-                            }`}
-                          style={
-                            timeInterval === "Live"
-                              ? {
-                                animationDuration: "1.5s",
-                                animationTimingFunction:
-                                  "cubic-bezier(0.4, 0, 0.6, 1)",
-                              }
-                              : {}
-                          }
-                        ></span>
-                      )}
-                      {label}
-                    </button>
-                  ))}
                 </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-1 justify-end items-center w-full sm:w-auto">
+              <div className="inline-flex items-center rounded-lg bg-gray-50 p-0.5 shadow-inner">
+                {[
+                  { value: "Live", label: "Live" },
+                  { value: "1h", label: "1h" },
+                  { value: "2h", label: "2h" },
+                  { value: "5h", label: "5h" },
+                  { value: "7h", label: "7h" },
+                  { value: "12h", label: "12h" },
+                ].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleTimeIntervalChange(value)}
+                    className={`relative flex items-center justify-center rounded-md px-3 py-1.5 text-[6px] text-xs transition-all duration-200 xl:text-[8px] 2xl:text-[14px] ${timeInterval === value
+                      ? "bg-white text-blue-600 shadow-sm ring-1 ring-gray-200"
+                      : "text-gray-600 hover:bg-white/50 hover:text-gray-900"
+                      } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1`}
+                    aria-pressed={timeInterval === value}
+                  >
+                    {value === "Live" && (
+                      <span
+                        className={`mr-1.5 h-1.5 w-1.5 rounded-full ${timeInterval === "Live"
+                          ? "animate-pulse bg-green-500"
+                          : "bg-gray-400"
+                          }`}
+                        style={
+                          timeInterval === "Live"
+                            ? {
+                              animationDuration: "1.5s",
+                              animationTimingFunction:
+                                "cubic-bezier(0.4, 0, 0.6, 1)",
+                            }
+                            : {}
+                        }
+                      ></span>
+                    )}
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 md:h-[400px] xl:h-[calc(100%-50px)] 2xl:h-[calc(100%-80px)]">
-              <Line
-                key={`${chartUpdateKey}-${selectedSide}`}
-                data={{
-                  labels: chartData.labels,
-                  datasets: (chartData.datasets || []).filter(
-                    (dataset, index) => {
-                      // Use the same sensor ID format as in the legend (e.g., 'ASide1', 'BSide1')
-                      const sensorNumber = index + 1;
-                      const sensorId = `${selectedSide}${sensorNumber}`;
+
+          </div>
+
+
+          <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 md:h-[430px-30px] xl:h-[calc(100%-50px)] 2xl:h-[calc(100%-80px)]">
+            <Line
+              key={`${chartUpdateKey}-${selectedSide}`}
+              data={{
+                labels: chartData.labels,
+                datasets: (chartData.datasets || []).filter(
+                  (dataset, index) => {
+                    // Use the same sensor ID format as in the legend (e.g., 'ASide1', 'BSide1')
+                    const sensorNumber = index + 1;
+                    const sensorId = `${selectedSide}${sensorNumber}`;
+                    return !hiddenSensors[sensorId];
+                  },
+                ),
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    display: false, // Hide default legend since we're using custom one
+                  },
+                  tooltip: {
+                    filter: (tooltipItem) => {
+                      const datasetIndex = tooltipItem.datasetIndex;
+                      // Get the sensor ID in the format used in hiddenSensors (e.g., 'ASide1', 'BSide1')
+                      const sensorId = `${selectedSide}${datasetIndex + 1}`;
                       return !hiddenSensors[sensorId];
                     },
-                  ),
-                }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  plugins: {
-                    legend: {
-                      display: false, // Hide default legend since we're using custom one
-                    },
-                    tooltip: {
-                      filter: (tooltipItem) => {
-                        const datasetIndex = tooltipItem.datasetIndex;
-                        // Get the sensor ID in the format used in hiddenSensors (e.g., 'ASide1', 'BSide1')
-                        const sensorId = `${selectedSide}${datasetIndex + 1}`;
-                        return !hiddenSensors[sensorId];
+                    backgroundColor: "#fff",
+                    titleColor: "#111827",
+                    titleFont: { weight: "600", size: 12 },
+                    bodyColor: "#4B5563",
+                    bodyFont: { size: 11 },
+                    borderColor: "#E5E7EB",
+                    borderWidth: 1,
+                    padding: 10,
+                    cornerRadius: 6,
+                    displayColors: true,
+                    usePointStyle: true,
+                    callbacks: {
+                      label: (context) => {
+                        // Convert dataset label from 'sensorX' to 'ESX' or 'WSX' format
+                        const sensorNum = context.dataset.label.replace(
+                          /\D/g,
+                          "",
+                        );
+                        const prefix = selectedSide === "ASide" ? "ES" : "WS";
+                        return `${prefix}${sensorNum}: ${context.parsed.y}°C`;
                       },
-                      backgroundColor: "#fff",
-                      titleColor: "#111827",
-                      titleFont: { weight: "600", size: 12 },
-                      bodyColor: "#4B5563",
-                      bodyFont: { size: 11 },
-                      borderColor: "#E5E7EB",
-                      borderWidth: 1,
-                      padding: 10,
-                      cornerRadius: 6,
-                      displayColors: true,
-                      usePointStyle: true,
-                      callbacks: {
-                        label: (context) => {
-                          // Convert dataset label from 'sensorX' to 'ESX' or 'WSX' format
-                          const sensorNum = context.dataset.label.replace(
-                            /\D/g,
-                            "",
-                          );
-                          const prefix = selectedSide === "ASide" ? "ES" : "WS";
-                          return `${prefix}${sensorNum}: ${context.parsed.y}°C`;
-                        },
-                        title: (context) => {
-                          const date = new Date(
-                            chartData.rawData?.[
-                              context[0]?.dataIndex
-                            ]?.timestamp,
-                          );
-                          return date.toLocaleString("en-GB", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          });
-                        },
+                      title: (context) => {
+                        const date = new Date(
+                          chartData.rawData?.[
+                            context[0]?.dataIndex
+                          ]?.timestamp,
+                        );
+                        return date.toLocaleString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        });
                       },
                     },
                   },
-                  scales: {
-                    x: {
-                      grid: { display: false },
-                      ticks: {
-                        color: "#6B7280",
-                        font: { size: 10 },
-                        maxRotation: 45,
-                        minRotation: 45,
-                        autoSkip: true,
-                        maxTicksLimit: 8,
-                        padding: 4,
-                      },
-                    },
-                    y: {
-                      grid: {
-                        color: "rgba(229, 231, 235, 0.5)",
-                        drawBorder: false,
-                        drawTicks: false,
-                        borderDash: [4, 4],
-                      },
-                      ticks: {
-                        color: "#6B7280",
-                        font: { size: 10 },
-                        padding: 6,
-                        callback: (value) => `${value}°C`,
-                      },
-                      min: 0,
-                      max: maxDataValue + 50,
+                },
+                scales: {
+                  x: {
+                    grid: { display: false },
+                    ticks: {
+                      color: "#6B7280",
+                      font: { size: 10 },
+                      maxRotation: 45,
+                      minRotation: 45,
+                      autoSkip: true,
+                      maxTicksLimit: 8,
+                      padding: 4,
                     },
                   },
-                  interaction: {
-                    intersect: false,
-                    mode: "index",
-                    axis: "x",
-                  },
-                  elements: {
-                    line: {
-                      borderWidth: 1.5,
+                  y: {
+                    grid: {
+                      color: "rgba(229, 231, 235, 0.5)",
+                      drawBorder: false,
+                      drawTicks: false,
+                      borderDash: [4, 4],
                     },
-                    point: {
-                      radius: 1.5,
-                      hoverRadius: 4,
-                      hoverBorderWidth: 2,
+                    ticks: {
+                      color: "#6B7280",
+                      font: { size: 10 },
+                      padding: 6,
+                      callback: (value) => `${value}°C`,
                     },
+                    min: 0,
+                    max: maxDataValue + 50,
                   },
-                  layout: {
-                    padding: { top: 10, right: 5, bottom: 10, left: 5 },
+                },
+                interaction: {
+                  intersect: false,
+                  mode: "index",
+                  axis: "x",
+                },
+                elements: {
+                  line: {
+                    borderWidth: 1.5,
                   },
-                  animation: {
-                    duration: 1000,
-                    easing: "easeOutQuart",
+                  point: {
+                    radius: 1.5,
+                    hoverRadius: 4,
+                    hoverBorderWidth: 2,
                   },
-                }}
-              />
-            </div>
+                },
+                layout: {
+                  padding: { top: 10, right: 5, bottom: 10, left: 5 },
+                },
+                animation: {
+                  duration: 1000,
+                  easing: "easeOutQuart",
+                },
+              }}
+            />
           </div>
         </div>
 
-        <div className="order-5 flex w-[100%] flex-col gap-1 rounded-2xl border-2 bg-white/30 p-2 shadow-md backdrop-blur-sm md:flex-row xl:order-5">
-          <div
-            className="z-10 grid h-full w-full grid-cols-3 gap-2 overflow-auto rounded-2xl border-white bg-white/5 p-1 backdrop-blur-sm md:w-[40%]"
-            style={{
-              scrollbarWidth: "thin",
-              scrollbarColor: "#6B7280 transparent",
-            }}
-          >
-            {/* Render SensorComparisonCard for ES1-ES12 and WS13-WS24 from API data, preserving API order */}
-            {sensorComparison.map((item) => (
-              <SensorComparisonCard
-                key={item.sensorId}
-                sensorId={item.sensorId}
-                currentAvg={item.latest ?? "N/A"}
-                previousAvg={item.average ?? "N/A"}
-                unit="°C"
-              />
-            ))}
-          </div>
+        <div className="order-5 flex w-[100%] flex-col gap-1 rounded-2xl border-2 bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]  p-2 shadow-md md:flex-row xl:order-5">
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col bg-white/5">
+            <div className="flex items-center justify-center gap-2 relative group">
+              <span className="text-center text-[14px] text-normal">
+                Real-Time Sensor Data - Previous Day's Average
+              </span>
+              <button 
+                className="text-gray-300 hover:text-white focus:outline-none"
+                aria-label="More information"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className="h-4 w-4" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  stroke="currentColor"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+                  />
+                </svg>
+              </button>
+              <div className="absolute hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 w-48 z-50 top-full mt-1 left-1/2 transform -translate-x-1/2">
+                <p>Last Day Average: Shown in gray</p>
+                <p>Current Temperature: Shown with color-coded trend</p>
+                <div className="flex items-center mt-1">
+                  <span className="text-red-500 mr-1">↑</span> Higher than average
+                </div>
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-1">↓</span> Lower than average
+                </div>
+              </div>
+            </div>
+            <div
+              className="z-10 grid h-full w-full grid-cols-2 gap-4 overflow-auto rounded-2xl border-white  p-1"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#6B7280 transparent",
+              }}
+            >
 
-          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%]">
-            <div className="relative">
+              {/* Render SensorComparisonCard for ES1-ES12 and WS13-WS24 from API data, preserving API order */}
+              {sensorComparison.map((item) => (
+                <SensorComparisonCard
+                  key={item.sensorId}
+                  sensorId={item.sensorId}
+                  currentAvg={item.latest ?? "N/A"}
+                  previousAvg={item.average ?? "N/A"}
+                  unit="°C"
+                />
+              ))}
+            </div>
+            
+            </div>
+
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%] text-white">
+            <div className="relative p-2">
               <img src={potShell} alt="potShell" />
               {/* east side sensors */}
               {leftValues.map((data, i) => {
@@ -1513,7 +1597,7 @@ const Dashboard = () => {
                 return (
                   <div
                     key={i}
-                    className="absolute top-[17%] flex flex-col gap-2 text-[8px] font-semibold leading-tight xs:text-[8px] xs:leading-normal 2xl:text-sm"
+                    className="absolute top-[17%] flex flex-col gap-2 text-[8px] font-normal leading-tight xs:text-[8px] xs:leading-normal 2xl:text-[12px]"
                     style={{ left: `${data}%` }}
                   >
                     <div
@@ -1543,7 +1627,7 @@ const Dashboard = () => {
                 return (
                   <div
                     key={i}
-                    className="xs:text-[8px] absolute top-[68%] flex flex-col gap-2 text-[8px] font-semibold leading-tight 2xl:text-xs 2xl:leading-normal"
+                    className="xs:text-[8px] absolute top-[68%] flex flex-col gap-2 text-[8px] font-normal leading-tight 2xl:text-[12px] 2xl:leading-normal"
                     style={{ left: `${data}%` }}
                   >
                     <div
@@ -1553,7 +1637,7 @@ const Dashboard = () => {
                     >
                       <div className="hover:text-[#3048C0]">{label}</div>
                       <div
-                        className={`absolute -bottom-[80%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-1 transition-all duration-300 ${hoveredIndex2 === i ? "opacity-100" : "pointer-events-none opacity-0"
+                        className={`absolute -bottom-[80%] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-white p-2 transition-all duration-300 ${hoveredIndex2 === i ? "opacity-100" : "pointer-events-none opacity-0"
                           }`}
                       >
                         {sensor?.value ?? "--"} °C

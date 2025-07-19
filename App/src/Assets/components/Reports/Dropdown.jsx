@@ -32,7 +32,7 @@ const Dropdown = ({ selected, setSelected }) => {
      <div className="items-end justify-end mt-4 ml-2 md:mt-0">
         <Menu as="div" className="relative inline-block text-left">
           <div>
-            <MenuButton className="inline-flex w-64 justify-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 backdrop-blur-[8px] shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]">
+            <MenuButton className="inline-flex w-64 justify-center gap-x-1.5 rounded-md bg-[#e9eefb]/25 px-3 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-gray-300 hover:bg-[#e9eefb]/15 backdrop-blur-[8px] shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]">
               {selected || "Select Configuration"}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
