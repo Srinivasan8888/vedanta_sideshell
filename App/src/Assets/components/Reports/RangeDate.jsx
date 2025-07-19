@@ -125,8 +125,11 @@ const RangeDate = () => {
               name="startdate"
               onChange={handleDateChange}
               value={startDate}
-              className="w-64 h-9 text-sm text-white bg-[#e9eefb]/25 rounded-lg border border-gray-200 p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)] bg-opacity-25"
-            />
+              className="w-64 h-9 text-sm text-white bg-transparent rounded-lg border border-white/30 p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]"
+      style={{
+        colorScheme: 'dark',
+        backgroundColor: 'rgba(233, 238, 251, 0.25)',
+      }}/>
           </div>
         </div>
 
@@ -139,8 +142,11 @@ const RangeDate = () => {
               name="enddate"
               onChange={handleDateChange}
               value={endDate}
-              className="w-64 h-9 text-sm text-white bg-[rgb(232, 235, 236)] border border-gray-200 rounded-md p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]"
-            />
+              className="w-64 h-9 text-sm text-white bg-transparent rounded-lg border border-white/30 p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]"
+      style={{
+        colorScheme: 'dark',
+        backgroundColor: 'rgba(233, 238, 251, 0.25)',
+      }}/>
           </div>
         </div>
 

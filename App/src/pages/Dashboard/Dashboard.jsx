@@ -1531,8 +1531,8 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="order-5 flex w-[100%] flex-col gap-1 rounded-2xl border-2 bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]  p-2 shadow-md md:flex-row xl:order-5">
-          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col ">
+        <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl    shadow-md md:flex-row xl:order-5">
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col  bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]">
             <div className="flex items-center justify-center gap-2 relative group">
               <span className="text-center text-[14px] text-normal uppercase">
                 Real-Time Sensor Data - Previous Day's Average
@@ -1589,7 +1589,7 @@ const Dashboard = () => {
             
             </div>
 
-          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%] text-white">
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[60%] text-white  bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]">
             <div className="relative p-2">
               <img src={potShell} alt="potShell" />
               {/* east side sensors */}
