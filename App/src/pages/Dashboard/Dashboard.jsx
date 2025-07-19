@@ -688,7 +688,7 @@ const Dashboard = () => {
 
   return (
     <div className="w-full h-full">
-      <div className="flex flex-col gap-4 p-1 md:p-4 xl:p-0 w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
+      <div className="flex flex-col gap-4 p-1 md:p-4   w-full h-full text-2xl font-bold text-black xl:grid xl:grid-cols-2 xl:grid-rows-2">
         <div className="overflow-hidden order-2 rounded-lg xl:order-1">
           <div className="grid gap-2 h-full grid-col">
             <div className="overflow-hidden p-2 w-full h-full rounded-2xl border-2 border-gray-100 shadow-md backdrop-blur-[5px] outline outline-2 outline-offset-[-1px] outline-white bg-gradient-to-br from-white/25 via-white/5 to-white/25 2xl:p-4">
