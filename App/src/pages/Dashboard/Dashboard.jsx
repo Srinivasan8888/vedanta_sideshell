@@ -881,7 +881,7 @@ const Dashboard = () => {
                             </span>
                           </td>
                         </tr>
-                        <tr className="border-b border-gray-100 transition-colors duration-150 group hover:bg-gray-50">
+                        <tr className="border-b border-gray-100 transition-colors duration-150 group hover:bg-white/20">
                           <td className="text-[10px] text-white 2xl:px-4 2xl:py-2 2xl:text-sm 2xl:font-medium">
                             <span className="inline-flex items-center whitespace-nowrap">
                               <span className="mr-2 w-2 h-2 bg-amber-500 rounded-full"></span>
