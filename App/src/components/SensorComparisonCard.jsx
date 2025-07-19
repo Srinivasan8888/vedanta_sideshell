@@ -14,9 +14,9 @@ const SensorComparisonCard = ({ sensorId, currentAvg, previousAvg, unit = '°C' 
 
   const getTrendIcon = () => {
     if (difference === null) return null;
-    if (difference > 0) return <FaArrowUp className="text-red-500 text-[6px] 2xl:text-[12px]" />;
-    if (difference < 0) return <FaArrowDown className="text-green-500 text-[6px] 2xl:text-[12px]" />;
-    return <FaEquals className="text-gray-500 text-[6px] 2xl:text-[12px]" />;
+    if (difference > 0) return <FaArrowUp className="text-[#ff0000] text-[6px] 2xl:text-[12px]" />;
+    if (difference < 0) return <FaArrowDown className="text-[#00d500] text-[6px] 2xl:text-[12px]" />;
+    return <FaEquals className="text-gray-400 text-[6px] 2xl:text-[12px]" />;
   };
 
   const getDifferenceText = () => {
@@ -33,25 +33,25 @@ const SensorComparisonCard = ({ sensorId, currentAvg, previousAvg, unit = '°C' 
   };
 
   return (
-    <div className="flex flex-col justify-between items-center p-1 rounded border border-gray-200 shadow-sm bg-white/90">
-      <span className="text-[8px] 2xl:text-[12px] font-medium text-gray-700 leading-tight">{sensorId}</span>
+    <div className="flex flex-col justify-between items-center p-1 rounded  bg-[#e9eefb]/20 shadow-sm">
+      <span className="text-[8px] 2xl:text-[12px] font-medium text-white leading-tight">{sensorId}</span>
       <div className="w-full leading-tight">
         <div className="flex items-baseline justify-between w-full px-1">
           <div className="flex flex-col items-center">
-            <span className="text-[5px] 2xl:text-[10px] text-gray-400 mb-0.5">LDA</span>
-            <span className="text-[7px] 2xl:text-[12px] text-gray-500">{displayValue(previousAvg)}</span>
+            <span className="text-[5px] 2xl:text-[10px] text-white mb-0.5">LDA</span>
+            <span className="text-[7px] 2xl:text-[12px] text-white">{displayValue(previousAvg)}</span>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[5px] 2xl:text-[10px] text-gray-400 mb-0.5">CT</span>
+            <span className="text-[5px] 2xl:text-[10px] text-white mb-0.5">CT</span>
             <div className="flex items-center">
               <span className={`text-[7px] 2xl:text-[12px] font-medium 2xl:font-semibold ${
                 hasValidValues
                   ? difference > 0
-                    ? 'text-red-500'
+                    ? 'text-[#ff0000]'
                     : difference < 0
-                      ? 'text-green-500'
-                      : 'text-gray-500'
-                  : 'text-gray-500'
+                      ? 'text-[#00d500]'
+                      : 'text-gray-400'
+                  : 'text-gray-400'
               }`}>
                 {displayValue(currentAvg)}
               </span>

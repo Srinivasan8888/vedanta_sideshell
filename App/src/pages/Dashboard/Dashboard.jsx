@@ -65,9 +65,12 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
     // Navigate to CollectorBar with sensorId and side as query parameters
     navigate(`/CollectorBar?sensorId=${sensorNumber}&side=${side}`);
   };
-
+//    bg-[rgba(234,237,249,1)] 
   return (
-    <div className="group relative h-full rounded-lg border border-gray-200 bg-[rgba(234,237,249,1)] p-1 shadow-md transition-shadow hover:shadow">
+    <div className="group relative h-full rounded-lg border border-gray-200 
+ 
+   bg-[#e9eefb]/70
+    p-1 shadow-md transition-shadow hover:shadow">
       <button
         onClick={handleNavigate}
         className="absolute top-1 right-4 p-1 rounded opacity-0 transition-opacity duration-200 hover:bg-blue-50 group-hover:opacity-100"
@@ -756,8 +759,8 @@ const Dashboard = () => {
 
         <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch rounded-2xl  shadow-md md:flex-row xl:order-3 xl:flex-row ">
           <div className="overflow-hidden w-full bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-2xl border border-gray-200 shadow-sm h-[250px] xl:h-[100%] text-white">
-            <div className="overflow-x-auto overflow-y-auto h-96 scrollbar-custom md:h-full">
-              <div className="text-center text-[10px] md:text-[12px] xl:text-[14px] font-normal">Each side's average reading- 24 Hrs</div>
+            <div className="overflow-x-auto overflow-y-auto h-96 scrollbar-custom md:h-full">          
+              <div className="text-center text-[10px] md:text-[12px] xl:text-[14px] font-normal uppercase">Each side's average reading- 24 Hrs</div>
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
                 <thead className="">
                   <tr className="text-left">
@@ -907,7 +910,7 @@ const Dashboard = () => {
           <div className="flex flex-col  w-full h-[50%] md:h-[100%] bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-xl border border-gray-100 ">
             <div className="flex h-[15%] flex-row justify-between border-b border-gray-100  sm:items-center 2xl:h-[20%] 2xl:gap-2 px-2">
 
-              <h5 className="text-[10px] font-normal leading-tight text-white 2xl:text-base 2xl:font-medium items-center justify-center flex">
+              <h5 className="text-[10px] font-normal leading-tight text-white 2xl:text-base 2xl:font-medium items-center justify-center flex uppercase">
                 Temp Stats
               </h5>
 
@@ -1125,8 +1128,8 @@ const Dashboard = () => {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"
-                      />
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                       />
                     </svg>
                   </div>
                 </div>
@@ -1203,7 +1206,7 @@ const Dashboard = () => {
           <div className="mb-4  h-[35%] md:h-[15%] items-center justify-around  gap-3 grid grid-row md:flex md:flex-row sm:items-center">
 
 
-            <h3 className="text-[10px] text-white xl:text-[10px] 2xl:text-[14px]">
+            <h3 className="text-[10px] text-white xl:text-[10px] 2xl:text-[14px] uppercase font-normal">
               Temperature Trend
             </h3>
 
@@ -1529,9 +1532,9 @@ const Dashboard = () => {
         </div>
 
         <div className="order-5 flex w-[100%] flex-col gap-1 rounded-2xl border-2 bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]  p-2 shadow-md md:flex-row xl:order-5">
-          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col bg-white/5">
+          <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col ">
             <div className="flex items-center justify-center gap-2 relative group">
-              <span className="text-center text-[14px] text-normal">
+              <span className="text-center text-[14px] text-normal uppercase">
                 Real-Time Sensor Data - Previous Day's Average
               </span>
               <button 
