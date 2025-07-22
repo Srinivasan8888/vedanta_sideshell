@@ -1,3 +1,4 @@
 srinivasan@xyma.in = superadmin@123
 user@xyma.in = user@123
 admin@xyma.in = admin@123
+test@xyma.in = test@123

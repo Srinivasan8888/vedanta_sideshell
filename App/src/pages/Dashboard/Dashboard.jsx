@@ -1415,7 +1415,6 @@ const Dashboard = () => {
                 labels: chartData.labels,
                 datasets: (chartData.datasets || []).filter(
                   (dataset, index) => {
-                    // Use the same sensor ID format as in the legend (e.g., 'ASide1', 'BSide1')
                     const sensorNumber = index + 1;
                     const sensorId = `${selectedSide}${sensorNumber}`;
                     return !hiddenSensors[sensorId];
@@ -1432,7 +1431,6 @@ const Dashboard = () => {
                   tooltip: {
                     filter: (tooltipItem) => {
                       const datasetIndex = tooltipItem.datasetIndex;
-                      // Get the sensor ID in the format used in hiddenSensors (e.g., 'ASide1', 'BSide1')
                       const sensorId = `${selectedSide}${datasetIndex + 1}`;
                       return !hiddenSensors[sensorId];
                     },
@@ -1455,7 +1453,9 @@ const Dashboard = () => {
                           "",
                         );
                         const prefix = selectedSide === "ASide" ? "ES" : "WS";
-                        return `${prefix}${sensorNum}: ${context.parsed.y}°C`;
+                        // For west side, add 12 to start from WS13
+                        const displayNum = selectedSide === "ASide" ? sensorNum : parseInt(sensorNum) + 12;
+                        return `${prefix}${displayNum}: ${context.parsed.y}°C`;
                       },
                       title: (context) => {
                         const date = new Date(

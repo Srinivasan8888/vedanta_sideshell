@@ -57,7 +57,7 @@ const Report = () => {
     //   </div>
     // </div>
 
-    <div className=" h-[100%] md:h-[93%]  flex flex-col rounded-lg border border-white m-4 flex-1 md:flex-row">
+    <div className=" h-[100%] md:h-[94%]  flex flex-col rounded-lg border border-white m-4 flex-1 md:flex-row">
       <ReportsButton
         selectedButton={selectedButton}
         setSelectedButton={setSelectedButton}
