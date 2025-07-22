@@ -773,7 +773,7 @@ class ApiController {
       const sensorComparison = await this.getSensorComparisonData(id);
 
       // Get the last updated time from database
-      const lastUpdated = latestWG1?.updatedAt || latestWG2?.updatedAt || new Date();
+      const lastUpdated = await sensormodel.findOne({}, {}, { sort: { TIME: -1 }, limit: 1 }).then(doc => doc?.updatedAt || new Date());
 
       // Prepare the unified response
       const response = {
