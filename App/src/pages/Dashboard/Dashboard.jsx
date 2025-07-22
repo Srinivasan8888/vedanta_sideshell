@@ -23,6 +23,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import zoomPlugin from "chartjs-plugin-zoom";
 import API from "../../Assets/components/Axios/AxiosInterceptor";
 import potShell from "../../Assets/images/pot_top1.png";
 import "../../Assets/components/miscellaneous/Scrollbar.css";
@@ -37,6 +38,7 @@ ChartJS.register(
   Tooltip,
   Legend,
   Filler,
+  zoomPlugin,
 );
 
 // Lazy load the ModelViewer component with error boundary
@@ -126,6 +128,8 @@ const SensorCard = React.memo(function SensorCard({ sensor }) {
 });
 
 const Dashboard = () => {
+  const chartRef = useRef(null);
+  const [zoomState, setZoomState] = useState(null);
   const [showLegendPopup, setShowLegendPopup] = useState(false);
   const [hiddenSensors, setHiddenSensors] = useState({}); // Track hidden sensors by ID
   const [timeInterval, setTimeInterval] = useState("Live");
@@ -161,10 +165,11 @@ const Dashboard = () => {
     // Clear chart data before fetching new data
     setAccumulatedData({ ASide: [], BSide: [] });
     setChartHistoricalData({ ASide: [], BSide: [] });
+    setZoomState(null); // Clear zoom state when changing intervals
 
     setTimeInterval(interval);
 
-    // Force chart remount by updating the key
+    // Only force chart remount for time interval changes (this will reset zoom)
     setChartUpdateKey((prev) => prev + 1);
 
     try {
@@ -176,7 +181,7 @@ const Dashboard = () => {
 
   const handleSideChange = (side) => {
     setSelectedSide(side);
-    // Force chart update by toggling the state
+    // Only force chart remount for side changes (this will reset zoom)
     setChartUpdateKey((prev) => prev + 1);
   };
 
@@ -629,6 +634,20 @@ const Dashboard = () => {
     };
   }, []);
 
+  // Restore zoom state after data updates (but not after side/interval changes)
+  useEffect(() => {
+    if (chartRef.current && zoomState && timeInterval === "Live") {
+      const chart = chartRef.current;
+      // Small delay to ensure chart is fully rendered
+      setTimeout(() => {
+        if (chart && chart.scales) {
+          chart.zoomScale('x', {min: zoomState.x.min, max: zoomState.x.max}, 'none');
+          chart.zoomScale('y', {min: zoomState.y.min, max: zoomState.y.max}, 'none');
+        }
+      }, 100);
+    }
+  }, [chartData, zoomState, timeInterval]);
+
   // Fetch SensorComparison data on mount
   useEffect(() => {
     const fetchSensorComparison = async () => {
@@ -760,7 +779,7 @@ const Dashboard = () => {
         <div className="flex overflow-hidden flex-col order-3 gap-4 items-stretch rounded-2xl  shadow-md md:flex-row xl:order-3 xl:flex-row ">
           <div className="overflow-hidden w-full bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-2xl border border-gray-200 shadow-sm h-[250px] xl:h-[100%] text-white">
             <div className="overflow-x-auto overflow-y-auto h-96 scrollbar-custom md:h-full">          
-              <div className="text-center text-[10px] md:text-[12px] xl:text-[14px] font-normal uppercase">Each side's average reading- 24 Hrs</div>
+              <div className="text-center text-[12px] xl:text-[8px] 2xl:text-[15px] font-normal uppercase">Each side's average reading- 24 Hrs</div>
               <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
                 <thead className="">
                   <tr className="text-left">
@@ -910,15 +929,15 @@ const Dashboard = () => {
           <div className="flex flex-col  w-full h-[50%] md:h-[100%] bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px] rounded-xl border border-gray-100 ">
             <div className="flex h-[15%] flex-row justify-between border-b border-gray-100  sm:items-center 2xl:h-[20%] 2xl:gap-2 px-2">
 
-              <h5 className="text-[10px] font-normal leading-tight text-white 2xl:text-base 2xl:font-medium items-center justify-center flex uppercase">
+              <h5 className="  leading-tight text-white text-[12px] xl:text-[8px] 2xl:text-[15px] font-normal items-center justify-center flex uppercase">
                 Temp Stats
               </h5>
 
               {lastUpdatedAt && (
-                <div className="items-center text-[10px] font-normal leading-tight text-white  2xl:text-sm justify-center flex">
+                <div className="items-center    leading-tight text-white text-[12px] xl:text-[8px] 2xl:text-[15px] font-normal justify-center flex">
                   <span className="font-normal text-white 2xl:font-medium">
                     Last updated: {" "}
-                    <span className="font-normal text-white 2xl:font-medium">
+                    <span className="font-bold text-white ">
                       {" "}
                       {new Date(lastUpdatedAt).toLocaleString("en-IN", {
                         day: "2-digit",
@@ -1206,7 +1225,7 @@ const Dashboard = () => {
           <div className="mb-4  h-[35%] md:h-[15%] items-center justify-around  gap-3 grid grid-row md:flex md:flex-row sm:items-center">
 
 
-            <h3 className="text-[10px] text-white xl:text-[10px] 2xl:text-[14px] uppercase font-normal">
+            <h3 className=" text-white text-[12px] xl:text-[8px] 2xl:text-[15px] font-normal uppercase">
               Temperature Trend
             </h3>
 
@@ -1409,7 +1428,22 @@ const Dashboard = () => {
 
 
           <div className="relative h-[300px] rounded-lg border border-gray-100 bg-white/50 md:h-[430px-30px] xl:h-[calc(100%-50px)] 2xl:h-[calc(100%-80px)]">
+            <div className="absolute top-2 right-2 z-10">
+              <button
+                onClick={() => {
+                  if (chartRef.current) {
+                    chartRef.current.resetZoom();
+                    setZoomState(null); // Clear saved zoom state
+                  }
+                }}
+                className="rounded bg-white/80 px-3 py-1 text-xs text-gray-700 hover:bg-white transition-colors shadow-sm"
+                title="Reset Zoom"
+              >
+                Reset Zoom
+              </button>
+            </div>
             <Line
+              ref={chartRef}
               key={`${chartUpdateKey}-${selectedSide}`}
               data={{
                 labels: chartData.labels,
@@ -1473,6 +1507,41 @@ const Dashboard = () => {
                       },
                     },
                   },
+                  zoom: {
+                    zoom: {
+                      wheel: {
+                        enabled: true,
+                      },
+                      pinch: {
+                        enabled: true,
+                      },
+                      mode: 'xy',
+                      scaleMode: 'xy',
+                      onZoom: function({chart}) {
+                        // Save zoom state when user zooms
+                        setZoomState({
+                          x: {min: chart.scales.x.min, max: chart.scales.x.max},
+                          y: {min: chart.scales.y.min, max: chart.scales.y.max}
+                        });
+                      },
+                    },
+                    pan: {
+                      enabled: true,
+                      mode: 'xy',
+                      scaleMode: 'xy',
+                      onPan: function({chart}) {
+                        // Save zoom state when user pans
+                        setZoomState({
+                          x: {min: chart.scales.x.min, max: chart.scales.x.max},
+                          y: {min: chart.scales.y.min, max: chart.scales.y.max}
+                        });
+                      },
+                    },
+                    limits: {
+                      y: {min: 'original', max: 'original'},
+                      x: {min: 'original', max: 'original'}
+                    },
+                  },
                 },
                 scales: {
                   x: {
@@ -1534,7 +1603,7 @@ const Dashboard = () => {
         <div className="order-5 flex w-[100%] flex-col gap-2 rounded-2xl    shadow-md md:flex-row xl:order-5">
           <div className="flex w-full items-center rounded-2xl border-2 border-white md:w-[40%] text-white flex-col  bg-gradient-to-br from-white/25 via-white/5 to-white/25 backdrop-blur-[5px]">
             <div className="flex items-center justify-center gap-2 relative group">
-              <span className="text-center text-[14px] text-normal uppercase">
+              <span className="text-center text-[12px] xl:text-[8px] 2xl:text-[15px] font-normal uppercase">
                 Real-Time Sensor Data - Previous Day's Average
               </span>
               <button 

@@ -8,7 +8,7 @@ const CountData = () => {
   const [selectedDrop, setSelecteddrop] = useState("");
   const [showTextBox, setShowTextBox] = useState(false);
   const [customLimit, setCustomLimit] = useState("");
-  const [selectedside, setSelectedside] = useState("");
+  const [selectedside, setSelectedside] = useState("Aside");
   const [selected, setSelected] = useState("");
 
   const handleRadioChange = (event) => {
@@ -66,10 +66,49 @@ const CountData = () => {
       }
 
       // Format data for Excel
-      const excelData = responseData.map(({ timestamp, ...rest }) => ({
-        timestamp: timestamp ? new Date(timestamp).toLocaleString() : 'N/A',
-        ...rest
-      }));
+      const excelData = responseData.map((item) => {
+        // Create base object with TIME field
+        const baseObj = {
+          // Use the TIME field directly from the API data
+          TIME: item.TIME || "N/A",
+          // Rename waveguide to more descriptive name
+          Side: item.waveguide === "Aside" ? "East Side" : "West Side",
+        };
+
+        // Get sensor keys (excluding non-sensor fields)
+        const sensorKeys = Object.keys(item).filter(
+          (key) =>
+            key !== "metadata" &&
+            key !== "count" &&
+            key !== "TIME" &&
+            key !== "waveguide" &&
+            key.startsWith("sensor")
+        );
+
+        // Sort sensor keys numerically (sensor1, sensor2, etc.)
+        sensorKeys.sort((a, b) => {
+          const numA = parseInt(a.replace("sensor", ""));
+          const numB = parseInt(b.replace("sensor", ""));
+          return numA - numB;
+        });
+
+        // Rename sensors based on the waveguide value in the data
+        sensorKeys.forEach((key) => {
+          const sensorNum = parseInt(key.replace("sensor", ""));
+          const sensorValue = item[key];
+          
+          // Skip adding N/A, empty or undefined sensors
+          if (sensorValue === undefined || sensorValue === "N/A") return;
+          
+          if (item.waveguide === "Aside") {
+            baseObj[`ES${sensorNum}`] = sensorValue;
+          } else if (item.waveguide === "Bside") {
+            baseObj[`WS${sensorNum + 12}`] = sensorValue;
+          }
+        });
+
+        return baseObj;
+      });
 
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -102,7 +141,7 @@ const CountData = () => {
           />
           <label
             htmlFor={`radio-${value}`}
-            className="text-sm font-medium text-gray-900 ms-2 dark:text-gray-300"
+            className="text-[12px]   xl:text-[10px] 2xl:text-[15px] font-medium text-gray-900 ms-2 dark:text-gray-300"
           >
             {label}
           </label>
@@ -173,7 +212,7 @@ const CountData = () => {
     //   </div>
     // </div>
     <>
-      <div className="md:h-[10%] flex flex-row justify-center items-end text-[14px] font-semibold 2xl:font-bold font-['Poppins'] md:mt-0 mt-4">
+      <div className="md:h-[10%] flex flex-row justify-center items-end text-[12px]    xl:text-[10px] 2xl:text-[15px] font-semibold 2xl:font-bold font-['Poppins'] md:mt-0 mt-4">
       Select Count      </div>
       {/* <div className="md:h-[70%]  grid grid-cols-1 grid-rows-3 gap-4 2xl:gap-0  justify-center w-[80%] 2xl:w-[60%] ">
 
@@ -210,29 +249,36 @@ const CountData = () => {
       </div> */}
 <div className="md:h-[70%] md:grid grid-cols-1 gap-4 justify-center w-[80%] 2xl:w-[60%]">
   <div className="flex flex-col items-center justify-between md:flex-row">
-    <div className="w-full md:w-1/3 text-[14px] font-normal text-start">Configuration</div>
+    <div className="w-full md:w-1/3 text-[12px] font-normal xl:text-[10px] 2xl:text-[15px] text-start">Configuration</div>
     <div className="w-full md:w-2/3">
-      <Dropdown selected={selected} setSelected={setSelected} />
+    <Dropdown
+            selected={selected}
+            setSelected={setSelected}
+            selectedSide={selectedside}
+          />
     </div>
   </div>
 
   <div className="flex flex-col items-center justify-between md:flex-row">
-    <div className="w-full md:w-1/3 text-[14px] font-normal text-start">Select Sides</div>
+    <div className="w-full md:w-1/3 text-[12px] font-normal xl:text-[10px] 2xl:text-[15px] text-start">Select Sides</div>
     <div className="w-full md:w-2/3">
-      <DropdownSides selectedside={selectedside} setSelectedside={setSelectedside} />
+    <DropdownSides
+            selectedside={selectedside}
+            setSelectedside={setSelectedside}
+          />
     </div>
   </div>
 
-  <div className="space-y-4">
-    <div className="text-[14px] font-normal mb-2">Select Data Range:</div>
-    <div className="space-y-2">
+  <div className="space-y-4 ">
+    <div className="text-[12px] font-normal xl:text-[10px] 2xl:text-[15px] mb-2">Select Data Range:</div>
+    <div className="space-y-2 ">
       {renderRadioButton("100", "Last 100 Data")}
       {renderRadioButton("500", "Last 500 Data")}
       {renderRadioButton("1000", "Last 1000 Data")}
       {renderRadioButton("custom", "Custom Data")}
 
       {showTextBox && (
-        <div className="mt-2 ml-6">
+        <div className="mt-2 ml-6 ">
           <input
             type="number"
             placeholder="Enter custom data"

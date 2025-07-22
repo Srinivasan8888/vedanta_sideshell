@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
 import axios from "axios";
 
-const Dropdown = ({ selected, setSelected }) => {
+const Dropdown = ({ selected, setSelected, selectedSide }) => {
     const [options, setOptions] = useState([]);
 
     // useEffect(() => {
@@ -22,18 +22,40 @@ const Dropdown = ({ selected, setSelected }) => {
     // };
 
     useEffect(() => {
-      // Generate "Sensor1" to "Sensor12"
-      const sensors = Array.from({ length: 38 }, (_, i) => `sensor${i + 1}`);
-      setOptions(sensors);
-    }, []);
+      // Generate sensor options with display names based on selected side
+    const sensors = Array.from({ length: 12 }, (_, i) => {
+      const sensorValue = `sensor${i + 1}`;
+      let displayName;
+
+      if (selectedSide === "Aside") {
+        // East side: es1, es2, etc.
+        displayName = `ES${i + 1}`;
+      } else if (selectedSide === "Bside") {
+        // West side: ws1, ws2, etc.
+        displayName = `WS${i + 13}`;
+      } else {
+        // Default fallback
+        displayName = sensorValue;
+      }
+
+      return {
+        value: sensorValue,
+        display: displayName,
+      };
+    });
+    setOptions(sensors);
+  }, [selectedSide]);
     
     
   return (
      <div className="items-end justify-end mt-4 ml-2 md:mt-0">
         <Menu as="div" className="relative inline-block text-left">
           <div>
-            <MenuButton className="inline-flex w-64 justify-center gap-x-1.5 rounded-md bg-[#e9eefb]/25 px-3 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-gray-300 hover:bg-[#e9eefb]/15 backdrop-blur-[8px] shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]">
-              {selected || "Select Configuration"}
+            <MenuButton className="inline-flex  w-56  2xl:w-64 justify-center gap-x-1.5 rounded-md bg-[#e9eefb]/25 px-3 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-gray-300 hover:bg-[#e9eefb]/15 backdrop-blur-[8px] shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]">
+            {selected
+              ? options.find((opt) => opt.value === selected)?.display ||
+                selected
+              : "Select Configuration"}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -53,7 +75,7 @@ const Dropdown = ({ selected, setSelected }) => {
 
       <MenuItems
         transition
-        className="absolute right-0 z-10 mt-2 w-56 max-h-96 overflow-auto origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
+        className="absolute right-0 z-10 mt-2  w-56 2xl:w-56 max-h-96 overflow-auto origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in"
       >
          <MenuItem>
               <button
@@ -65,17 +87,17 @@ const Dropdown = ({ selected, setSelected }) => {
               </button>
             </MenuItem>
             <div className="py-1">
-              {options.map((option, index) => (
-                <MenuItem key={index}>
-                  <button
-                    type="button" 
-                    onClick={() => setSelected(option)} 
-                    className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none"
-                  >
-                    {option}
-                  </button>
-                </MenuItem>
-              ))}
+            {options.map((option, index) => (
+              <MenuItem key={index}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(option.value)}
+                  className="block px-4 py-2 text-sm text-gray-700 data-[focus]:bg-gray-100 data-[focus]:text-gray-900 data-[focus]:outline-none"
+                >
+                  {option.display}
+                </button>
+              </MenuItem>
+            ))}
              
             </div>
           </MenuItems>

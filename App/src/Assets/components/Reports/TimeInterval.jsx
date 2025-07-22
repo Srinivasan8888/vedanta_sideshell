@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Dropdown from "./Dropdown";
-import * as XLSX from 'xlsx/xlsx.mjs';
+import * as XLSX from "xlsx/xlsx.mjs";
 import DropdownSides from "./Dropdown-sides";
 import API from "../Axios/AxiosInterceptor";
 
@@ -9,12 +9,12 @@ const TimeInterval = () => {
   const [average, setAverage] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [selectedside, setSelectedside] = useState("");
+  const [selectedside, setSelectedside] = useState("Aside");
 
   const handleRadioChange = (event) => {
     setSelected(event.target.value);
   };
-  
+
   const handleRadioChangeSide = (event) => {
     setSelectedside(event.target.value);
   };
@@ -23,7 +23,6 @@ const TimeInterval = () => {
     setAverage(event.target.value);
     // console.log("Selected Radio Value:", event.target.value); // Log the selected value
   };
-
 
   const handleDateChange = (event) => {
     const { name, value } = event.target;
@@ -36,68 +35,120 @@ const TimeInterval = () => {
     }
   };
 
-    const downloadexcel = () => {
-      if (!startDate || !endDate) {
-        alert("Please select both start and end dates.");
-      } else if (!average) {
-        alert("Please select the average.");
-      } else if (!selected) {
-        alert("Please select a configuration.");
-      } else if (!selectedside) {
-        alert("Please select a side.");
-      } else {
-        const apidate = async () => {
-          try {
-            // Build query parameters
-            const params = new URLSearchParams({
-              sensorrange: selected,
-              sides: selectedside,
-              startDate: startDate,
-              endDate: endDate,
-              averageBy: average
+  const downloadexcel = () => {
+    if (!startDate || !endDate) {
+      alert("Please select both start and end dates.");
+    } else if (!average) {
+      alert("Please select the average.");
+    } else if (!selected) {
+      alert("Please select a configuration.");
+    } else if (!selectedside) {
+      alert("Please select a side.");
+    } else {
+      const apidate = async () => {
+        try {
+          // Build query parameters
+          const params = new URLSearchParams({
+            sensorrange: selected,
+            sides: selectedside,
+            startDate: startDate,
+            endDate: endDate,
+            averageBy: average,
+          });
+
+          const response = await API.get(
+            `${process.env.REACT_APP_SERVER_URL}api/v2/getReportPerData?${params.toString()}`,
+          );
+
+          console.log("API Response:", response);
+          const responseData = response.data?.data || [];
+          console.log("Response Data:", responseData);
+
+          if (!responseData || responseData.length === 0) {
+            alert("No data found for the selected criteria.");
+            return;
+          }
+
+          // Get side information from metadata
+          const side = responseData.metadata?.side || selectedside;
+
+          // Format data for Excel
+          const excelData = responseData
+            .filter((item) => !item.metadata)
+            .map((item) => {
+              // Create base object with timestamp
+              const baseObj = {
+                // Use the timestamp field directly
+                TIME: item.timestamp
+                  ? new Date(item.timestamp).toLocaleString()
+                  : "N/A",
+                // Rename side to more descriptive name
+                Side: side === "Aside" ? "East Side" : "West Side",
+              };
+
+              // Get sensor keys (excluding metadata, timestamp and count)
+              const sensorKeys = Object.keys(item).filter(
+                (key) =>
+                  key !== "metadata" &&
+                  key !== "count" &&
+                  key !== "timestamp" &&
+                  key.startsWith("sensor"),
+              );
+
+              // Sort sensor keys numerically (sensor1, sensor2, etc.)
+              sensorKeys.sort((a, b) => {
+                const numA = parseInt(a.replace("sensor", ""));
+                const numB = parseInt(b.replace("sensor", ""));
+                return numA - numB;
+              });
+
+              // Rename sensors based on the side value
+              sensorKeys.forEach((key) => {
+                const sensorNum = parseInt(key.replace("sensor", ""));
+                const sensorValue = item[key];
+
+                // Skip adding zero, N/A, empty or undefined sensors
+                if (
+                  sensorValue === undefined ||
+                  sensorValue === "N/A" ||
+                  sensorValue === 0
+                )
+                  return;
+
+                if (side === "Aside") {
+                  baseObj[`ES${sensorNum}`] = sensorValue;
+                } else if (side === "Bside") {
+                  baseObj[`WS${sensorNum + 12}`] = sensorValue;
+                }
+              });
+
+              return baseObj;
             });
 
-            const response = await API.get(
-              `${process.env.REACT_APP_SERVER_URL}api/v2/getReportPerData?${params.toString()}`
-            );
-            
-            console.log('API Response:', response);
-            const responseData = response.data?.data || [];
-            console.log('Response Data:', responseData);
-  
-            if (!responseData || responseData.length === 0) {
-              alert("No data found for the selected criteria.");
-              return;
-            }
+          const wb = XLSX.utils.book_new();
+          const ws = XLSX.utils.json_to_sheet(excelData);
+          XLSX.utils.book_append_sheet(wb, ws, "Data");
 
-            // Format data for Excel - exclude metadata and count fields
-            const excelData = responseData.map(({ timestamp, count, ...rest }) => ({
-              timestamp: new Date(timestamp).toLocaleString(),
-              ...Object.keys(rest).reduce((acc, key) => {
-                // Only include sensor data fields (like sensor1, sensor2, etc.)
-                if (key !== 'metadata' && key !== 'count') {
-                  acc[key] = rest[key];
-                }
-                return acc;
-              }, {})
-            }));
-  
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(excelData);
-            XLSX.utils.book_append_sheet(wb, ws, "Data");
-            
-            const currentTime = new Date().toLocaleString().replace(/:/g, '-');
-            XLSX.writeFile(wb, `${selected}_${selectedside}_${average}_report_${currentTime}.xlsx`);
-            console.log("Data exported to Excel:", excelData);
-          } catch (error) {
-            console.error("Error fetching or processing data:", error);
-            alert("An error occurred while processing your request. Please try again.");
-          }
-        };
-  
-        apidate();
-      }
-    };
+          const currentTime = new Date()
+            .toLocaleString()
+            .replace(/:/g, "-")
+            .replace(/,/g, "");
+          XLSX.writeFile(
+            wb,
+            `${selected}_${selectedside}_report_${currentTime}.xlsx`,
+          );
+          console.log("Data exported to Excel:", excelData);
+        } catch (error) {
+          console.error("Error fetching or processing data:", error);
+          alert(
+            "An error occurred while processing your request. Please try again.",
+          );
+        }
+      };
+
+      apidate();
+    }
+  };
   return (
     <>
       {/* <div className="md:h-full   md:p-4 xl:p-0 xl:w-[50%] w-[100%] md:mb-0 ">
@@ -206,27 +257,36 @@ const TimeInterval = () => {
           </div>
         </div>
       </div> */}
-      
-       
-<div className="md:h-[10%] flex flex-row justify-center items-end text-[14px] font-semibold 2xl:font-bold font-['Poppins'] md:mt-0 mt-4">
-Select Time Interval
-      </div>
-      <div className="md:h-[70%]  md:grid grid-cols-1 grid-rows-5 gap-4 2xl:gap-0  justify-center w-[80%] 2xl:w-[60%] ">
 
-        <div className="flex flex-col items-center justify-between  md:flex-row">
-          <div className="items-start text-[14px] font-normal">Configuration</div>
+      <div className="mt-4 flex flex-row items-end justify-center font-['Poppins'] text-[12px] font-semibold md:mt-0 md:h-[10%] xl:text-[10px] 2xl:text-[15px] 2xl:font-bold">
+        Select Time Interval
+      </div>
+      <div className="w-[80%] grid-cols-1 grid-rows-5 justify-center gap-4 md:grid md:h-[70%] 2xl:w-[60%] 2xl:gap-0">
+        <div className="flex flex-col items-center justify-between md:flex-row">
+          <div className="items-start text-[12px] font-normal xl:text-[10px] 2xl:text-[15px]">
+            Configuration
+          </div>
           <Dropdown
-           selected={selected} setSelected={setSelected}
+            selected={selected}
+            setSelected={setSelected}
+            selectedSide={selectedside}
           />
         </div>
 
-        <div className="flex flex-col items-center justify-between  md:flex-row">
-          <div className="items-start text-[14px] font-normal">Select Sides</div>
-          <DropdownSides selectedside={selectedside} setSelectedside={setSelectedside}/>
+        <div className="flex flex-col items-center justify-between md:flex-row">
+          <div className="ttext-[12px] items-start font-normal xl:text-[10px] 2xl:text-[15px]">
+            Select Sides
+          </div>
+          <DropdownSides
+            selectedside={selectedside}
+            setSelectedside={setSelectedside}
+          />
         </div>
 
         <div className="flex flex-col items-center justify-between md:flex-row">
-          <div className="text-[14px] font-normal text-start">From</div>
+          <div className="text-start text-[12px] font-normal xl:text-[10px] 2xl:text-[15px]">
+            From
+          </div>
           <div>
             <input
               type="date"
@@ -234,16 +294,19 @@ Select Time Interval
               name="startdate"
               onChange={handleDateChange}
               value={startDate}
-              className="w-64 h-9 text-sm text-white bg-transparent rounded-lg border border-white/30 p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]"
-      style={{
-        colorScheme: 'dark',
-        backgroundColor: 'rgba(233, 238, 251, 0.25)',
-      }}/>
+              className="custom-datepicker mt-4 h-9 w-56 rounded-lg border border-white/30 bg-transparent p-1 text-sm text-white shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)] backdrop-blur-[8px] md:mt-0 2xl:w-64"
+              style={{
+                colorScheme: "dark",
+                backgroundColor: "rgba(233, 238, 251, 0.25)",
+              }}
+            />
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-between md:flex-row">
-          <div className="text-[14px] font-normal text-start">To</div>
+          <div className="text-start text-[12px] font-normal xl:text-[10px] 2xl:text-[15px]">
+            To
+          </div>
           <div>
             <input
               type="date"
@@ -251,22 +314,22 @@ Select Time Interval
               name="enddate"
               onChange={handleDateChange}
               value={endDate}
-              className="w-64 h-9 text-sm text-white bg-transparent rounded-lg border border-white p-1 custom-datepicker backdrop-blur-[8px] md:mt-0 mt-4 shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)]"
-      style={{
-        colorScheme: 'dark',
-        backgroundColor: 'rgba(233, 238, 251, 0.25)',
-      }}/>
+              className="custom-datepicker mt-4 h-9 w-56 rounded-lg border border-white bg-transparent p-1 text-sm text-white shadow-[inset_4px_4px_4px_0_rgba(0,0,0,0.25)] backdrop-blur-[8px] md:mt-0 2xl:w-64"
+              style={{
+                colorScheme: "dark",
+                backgroundColor: "rgba(233, 238, 251, 0.25)",
+              }}
+            />
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-between ">
-
-          <div className="flex text-[14px] font-normal 2xl:font-bold justify-center item-center">
-          Get 1 data for every -
+        <div className="flex flex-col items-center justify-between">
+          <div className="item-center flex justify-center text-[12px] font-normal xl:text-[10px] 2xl:text-[15px] 2xl:font-bold">
+            Get 1 data for every -
           </div>
 
-          <div className="flex flex-col items-center justify-between md:flex-row gap-10">
-            <div className="flex items-center mb-3 2xl:mb-10">
+          <div className="flex flex-col items-center justify-between gap-10 md:flex-row">
+            <div className="mb-3 flex items-center 2xl:mb-10">
               <input
                 id="radio-2"
                 type="radio"
@@ -274,16 +337,16 @@ Select Time Interval
                 name="radio-group"
                 checked={average === "Hour"}
                 onChange={averageradio}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
               />
               <label
                 htmlFor="radio-2"
-                className="text-sm font-medium text-gray-900 ms-2 dark:text-gray-300"
+                className="ms-2 text-[12px] font-medium text-gray-900 xl:text-[10px] 2xl:text-[15px] dark:text-gray-300"
               >
                 Hour
               </label>
             </div>
-            <div className="flex items-center mb-3 2xl:mb-10">
+            <div className="mb-3 flex items-center 2xl:mb-10">
               <input
                 id="radio-3"
                 type="radio"
@@ -291,25 +354,22 @@ Select Time Interval
                 name="radio-group"
                 checked={average === "Day"}
                 onChange={averageradio}
-                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                className="h-4 w-4 border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
               />
               <label
                 htmlFor="radio-3"
-                className="text-sm font-medium text-gray-900 ms-2 dark:text-gray-300"
+                className="ms-2 text-[12px] font-medium text-gray-900 xl:text-[10px] 2xl:text-[15px] dark:text-gray-300"
               >
                 Day
               </label>
             </div>
           </div>
         </div>
-
       </div>
 
-      <div className="flex md:h-[20%] text-[14px] font-semibold 2xl:font-bold justify-center item-center">
-        <div className="flex items-center justify-center w-44 2xl:w-56 h-12 2xl:h-16 bg-[#e9eefb]/50 rounded-lg text-white mt-4 2xl:mt-0">
-          <button className="flex items-center"
-          onClick={downloadexcel}
-          >
+      <div className="item-center flex justify-center text-[14px] font-semibold md:h-[20%] 2xl:font-bold">
+        <div className="mt-4 flex h-12 w-44 items-center justify-center rounded-lg bg-[#e9eefb]/50 text-white 2xl:mt-0 2xl:h-16 2xl:w-56">
+          <button className="flex items-center" onClick={downloadexcel}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -324,11 +384,10 @@ Select Time Interval
                 d="M7.5 7.5h-.75A2.25 2.25 0 0 0 4.5 9.75v7.5a2.25 2.25 0 0 0 2.25 2.25h7.5a2.25 2.25 0 0 0 2.25-2.25v-7.5a2.25 2.25 0 0 0-2.25-2.25h-.75m-6 3.75 3 3m0 0 3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 0 1 2.25 2.25v7.5a2.25 2.25 0 0 1-2.25 2.25h-7.5a2.25 2.25 0 0 1-2.25-2.25v-.75"
               />
             </svg>
-            <span className="ml-2 ">Download Excel</span>
+            <span className="ml-2">Download Excel</span>
           </button>
         </div>
       </div>
-
     </>
   );
 };

@@ -245,7 +245,7 @@ const Analytics = () => {
         </div>
       </div>
 
-      <div className="flex-1 h-[400px] xl:h-[55%] 2xl:h-[59%]   xl:mt-1  rounded-xl border border-white bg-gradient-to-br from-white/20 via-white/5 to-white/20 backdrop-blur-[5px] md:w-full ">
+      <div className="flex-1 h-[400px] xl:h-[55%] 2xl:h-[56%]   xl:mt-1  rounded-xl border border-white bg-gradient-to-br from-white/20 via-white/5 to-white/20 backdrop-blur-[5px] md:w-full ">
         <AnalyticsChart data={fetchedData} />
       </div>
 

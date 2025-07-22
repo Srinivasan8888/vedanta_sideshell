@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import zoomPlugin from "chartjs-plugin-zoom";
 
 ChartJS.register(
   CategoryScale,
@@ -19,6 +20,7 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  zoomPlugin,
 );
 
 // Helper function to get sensor name based on waveguide and sensor number
@@ -33,6 +35,8 @@ const getSensorName = (waveguide, sensorNumber) => {
 };
 
 const AnalyticsChart = ({ data }) => {
+  const chartRef = useRef(null);
+
   // Transform the data if it's in the new format (array of readings with timestamps)
   const transformData = (apiData, metadata = {}) => {
     if (!apiData || !Array.isArray(apiData)) {
@@ -91,7 +95,6 @@ const AnalyticsChart = ({ data }) => {
 
     // Create a dataset for each sensor
     const datasets = sensorKeys.map((sensorKey, index) => {
-      const sensorNumber = sensorKey.replace("sensor", "");
       const sensorName = getSensorName(waveguide, sensorKey);
       return {
         label: sensorName,
@@ -169,6 +172,27 @@ const AnalyticsChart = ({ data }) => {
           },
         },
       },
+      zoom: {
+        zoom: {
+          wheel: {
+            enabled: true,
+          },
+          pinch: {
+            enabled: true,
+          },
+          mode: "xy",
+          scaleMode: "xy",
+        },
+        pan: {
+          enabled: true,
+          mode: "xy",
+          scaleMode: "xy",
+        },
+        limits: {
+          y: { min: "original", max: "original" },
+          x: { min: "original", max: "original" },
+        },
+      },
     },
     scales: {
       x: {
@@ -178,7 +202,7 @@ const AnalyticsChart = ({ data }) => {
           maxTicksLimit: 10,
         },
         grid: {
-          display: false,
+          display: true,
         },
       },
       y: {
@@ -193,8 +217,8 @@ const AnalyticsChart = ({ data }) => {
           },
         },
         grid: {
-          color: "rgba(255, 255, 255, 0.5)",
-          drawOnChartArea: false,
+          
+          drawOnChartArea: true,
         },
       },
     },
@@ -229,6 +253,9 @@ const AnalyticsChart = ({ data }) => {
         },
         padding: window.innerWidth < 768 ? 6 : 10,
       },
+      zoom: {
+        ...options.plugins.zoom,
+      },
     },
     scales: {
       ...options.scales,
@@ -256,11 +283,27 @@ const AnalyticsChart = ({ data }) => {
 
   return (
     <div className="relative flex h-full w-full flex-col rounded-xl bg-gradient-to-br from-white/20 via-white/5 to-white/20">
-      <div className="ext-xs w-fit rounded-tl-xl bg-black bg-opacity-50 text-white sm:text-sm">
-        Data Points: {dataPointsCount}
+      <div className="flex items-center justify-between">
+        <div className=" w-fit rounded-tl-xl bg-black bg-opacity-50 text-white sm:text-sm">
+          Data Points: {dataPointsCount}
+        </div>
+        <div className="flex gap-2 z-10">
+          <button
+            onClick={() => {
+              if (chartRef.current) {
+                chartRef.current.resetZoom();
+              }
+            }}
+            className="rounded bg-white/20 px-3 text-xs text-white transition-colors hover:bg-white/30"
+            title="Reset Zoom"
+          >
+            Reset Zoom
+          </button>
+        </div>
       </div>
-      <div className="h-full w-full flex-1 p-4">
+      <div className="h-full w-full flex-1 ">
         <Line
+          ref={chartRef}
           data={chartData}
           options={responsiveOptions}
           style={{
