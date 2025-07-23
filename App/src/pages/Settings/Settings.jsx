@@ -230,7 +230,7 @@ const Settings = () => {
         
         <main className="flex-1 p-6 ">
           {/* Welcome Card */}
-          <div className="bg-[#101010]/90 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg overflow-hidden mb-8">
+          <div className="bg-gradient-to-br from-white/20 via-white/5 to-white/20 backdrop-blur-[5px] rounded-xl border border-white/10 shadow-lg overflow-hidden mb-8">
             <div className="p-6">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
                 {/* Profile Picture */}
@@ -282,7 +282,7 @@ const Settings = () => {
           </div>
 
           {/* Personal Information Card */}
-          <div className="bg-[#101010]/90 backdrop-blur-sm rounded-xl border border-white/10 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-br from-white/20 via-white/5 to-white/20 backdrop-blur-[5px] rounded-xl border border-white/10 shadow-lg overflow-hidden">
             <div className="p-6">
               <h2 className="text-xl font-semibold text-white mb-6">Personal Information</h2>
               
